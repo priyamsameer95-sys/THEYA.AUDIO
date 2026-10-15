@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Why Async Python Scales So Well | TechBlog</title>
+  <meta name="author" content="Jane Doe">
+  <meta property="og:site_name" content="TechBlog">
+  <script>window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);}</script>
+  <style>.sidebar{float:right}</style>
+</head>
+<body>
+  <div id="cookie-banner" class="cookie-consent popup">
+    We use cookies to improve your experience. <button>Accept all cookies</button> <a href="/privacy">Manage preferences</a>
+  </div>
+
+  <header id="site-header" class="nav-wrapper">
+    <a href="/" class="logo">TechBlog</a>
+    <nav class="mega-menu">
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/blog">Articles</a></li>
+        <li><a href="/sitemap">Sitemap</a></li>
+        <li><a href="/pricing">Pricing</a></li>
+        <li><a href="/about">About Us</a></li>
+        <li><a href="/login">Sign In</a></li>
+      </ul>
+    </nav>
+    <form class="search"><input type="search" placeholder="Search TechBlog"></form>
+  </header>
+
+  <main>
+    <article class="post-content">
+      <h1>Why Async Python Scales So Well</h1>
+      <p class="byline">By Jane Doe, March 3, 2026</p>
+
+      <p>Traditional synchronous web servers block an entire operating system thread every time they wait for a network socket or a database query to return, which puts a hard ceiling on how many users a single machine can serve at once.</p>
+
+      <p>By contrast, an event loop driven by Uvicorn and FastAPI can juggle thousands of waiting HTTP connections on a single CPU core, switching between tasks whenever input or output is pending, so the processor almost never sits idle while the network catches up.</p>
+
+      <h2>A tiny example</h2>
+      <p>The snippet below starts three slow downloads at the same time instead of one after another, and the whole batch finishes in roughly the time of the slowest request.</p>
+      <pre><code class="language-python">import asyncio
+import httpx
+
+async def main():
+    async with httpx.AsyncClient() as client:
+        pages = await asyncio.gather(*(client.get(u) for u in URLS))
+</code></pre>
+
+      <h2>How much faster is it?</h2>
+      <p>In our own benchmark on a modest laptop, the difference was dramatic once the number of concurrent clients climbed past a few hundred.</p>
+      <table>
+        <tr><th>Server model</th><th>Requests per second</th></tr>
+        <tr><td>Threaded sync</td><td>900</td></tr>
+        <tr><td>Async event loop</td><td>12000</td></tr>
+      </table>
+
+      <p>The lesson is not that async is magic, but that most web workloads spend their lives waiting, and a design that embraces waiting wins. Dr. Smith summed it up neatly at last year's conference: concurrency is about structure, while parallelism is about execution.</p>
+    </article>
+  </main>
+
+  <aside class="sidebar sidebar-trending">
+    <h3>Trending Posts</h3>
+    <ul>
+      <li><a href="/post-1">Top 10 VS Code Themes</a></li>
+      <li><a href="/post-2">Learn Git in 5 Minutes</a></li>
+      <li><a href="/post-3">Linux Terminal Tricks</a></li>
+    </ul>
+    <div class="newsletter">
+      <h3>Subscribe to our newsletter</h3>
+      <form><input type="email" placeholder="you@example.com"><button>Subscribe</button></form>
+    </div>
+  </aside>
+
+  <footer id="global-footer">
+    <p>Copyright 2026 TechBlog Inc. All rights reserved.</p>
+    <a href="/terms">Terms</a> • <a href="/privacy">Privacy</a> • <a href="/cookies">Cookies</a> • <a href="/sitemap.xml">Sitemap XML</a>
+  </footer>
+</body>
+</html>

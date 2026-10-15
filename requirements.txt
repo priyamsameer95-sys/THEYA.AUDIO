@@ -1,0 +1,16 @@
+# Core Extraction (Phase 1)
+httpx>=0.27.0
+trafilatura>=2.0.0
+lxml_html_clean>=0.4.0
+pydantic>=2.9.0
+
+# Text Sanitizer & SBD (Phase 2)
+pysbd>=0.3.4
+
+# Streaming Neural TTS & Web Server (Phases 3 & 4)
+edge-tts>=6.1.12
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# Dev & Tests
+pytest>=8.0.0

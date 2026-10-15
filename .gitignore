@@ -1,0 +1,22 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store
+
+# Local model weights & audio outputs (later phases)
+models/
+*.onnx
+*.bin
+*.mp3
+*.wav
+
+# Ad-hoc fixtures captured with --save-fixture
+tests/fixtures/live/
+
+# SQLite databases & WAL files
+*.db
+*.db-shm
+*.db-wal
+data/*.db*
+

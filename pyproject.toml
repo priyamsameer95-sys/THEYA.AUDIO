@@ -1,0 +1,11 @@
+[project]
+name = "theya-voice"
+version = "0.1.0"
+description = "Turn any webpage into a clean, sentence-highlighted podcast."
+requires-python = ">=3.9"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = ["live: hits real websites (set THEYA_LIVE=1)"]
+filterwarnings = ["ignore:urllib3 v2 only supports OpenSSL"]

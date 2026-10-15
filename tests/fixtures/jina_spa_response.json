@@ -1,0 +1,11 @@
+{
+  "code": 200,
+  "status": 20000,
+  "data": {
+    "title": "Building Realtime Dashboards",
+    "description": "How we stream live metrics to the browser.",
+    "url": "https://spa.example/posts/realtime",
+    "publishedTime": "2026-02-10T09:00:00Z",
+    "content": "# Building Realtime Dashboards\n\nOur dashboard used to poll the server every five seconds, which meant every open browser tab hammered the database with identical queries even when nothing had changed at all.\n\nWe replaced polling with server-sent events, a simple one-way streaming channel that keeps a single HTTP connection open and pushes a small update only when a metric actually moves.\n\nThe result was a ninety percent drop in database load, smoother charts for our users, and a much calmer on-call rotation for the engineers who had been woken up by query spikes every single week.\n\nIf you are building something similar, start with server-sent events before reaching for WebSockets, because most dashboards only ever need data to flow in one direction and the simpler protocol is far easier to debug, cache, and scale behind an ordinary load balancer."
+  }
+}

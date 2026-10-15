@@ -1,0 +1,2976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>they.audio — Acoustic Monograph & Neural Podcast Studio (theya.voice)</title>
+
+  <!-- Google Fonts: Editorial Serif (Newsreader) + Interface Sans (Plus Jakarta Sans) + Telemetry Mono (JetBrains Mono) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Client-side WebAssembly OCR for Screenshots & Graphic Documents -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <style>
+    /* =========================================================================
+       1. UI/UX Pro Max Design Tokens (Studio Obsidian & Authored Editorial)
+       ========================================================================= */
+    :root {
+      /* Theme 1: Studio Obsidian (Default Cinematic Noir) */
+      --bg-page: #08090d;
+      --bg-surface: #10121a;
+      --bg-subtle: #171a24;
+      --text-primary: #f6f8fc;
+      --text-secondary: #9aa1b5;
+      --text-muted: #575e74;
+      --border-rule: #1e2230;
+      --border-strong: #2c3246;
+      --accent: #ff6224;               /* Studio Copper / Vacuum-Tube Glow */
+      --accent-hover: #ff7844;
+      --accent-subtle: rgba(255, 98, 36, 0.14);
+      --accent-glow: rgba(255, 98, 36, 0.28);
+      --highlight-bg: rgba(255, 98, 36, 0.08);
+      --highlight-border: #ff6224;
+      --dock-bg: rgba(10, 11, 16, 0.94);
+      --code-bg: #141722;
+
+      --font-display: "Syne", -apple-system, sans-serif;
+      --font-headline: "Fraunces", Georgia, serif;
+      --font-ui: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-reader: "Newsreader", Georgia, serif;
+      --font-mono: "JetBrains Mono", ui-monospace, monospace;
+      --font-size-reader: 21px;
+      --touch-target: 44px;
+      --focus-ring: 2px solid var(--accent);
+    }
+
+    body.theme-archival {
+      /* Theme 2: Archival Linen & Sumi Ink */
+      --bg-page: #f7f5f0;
+      --bg-surface: #ffffff;
+      --bg-subtle: #eeeae1;
+      --text-primary: #121316;
+      --text-secondary: #57544e;
+      --text-muted: #8c877e;
+      --border-rule: #e4dfd4;
+      --border-strong: #d0c8ba;
+      --accent: #b45309;               /* Deep Amber / Archival Wax */
+      --accent-hover: #92400e;
+      --accent-subtle: #fef3c7;
+      --accent-glow: rgba(180, 83, 9, 0.15);
+      --highlight-bg: rgba(180, 83, 9, 0.07);
+      --highlight-border: #b45309;
+      --dock-bg: rgba(247, 245, 240, 0.96);
+      --code-bg: #eeeae1;
+    }
+
+    body.theme-light {
+      /* Theme 3: Swiss Technical Daylight */
+      --bg-page: #fafafa;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f4f4f5;
+      --text-primary: #09090b;
+      --text-secondary: #52525b;
+      --text-muted: #a1a1aa;
+      --border-rule: #e4e4e7;
+      --border-strong: #d4d4d8;
+      --accent: #e11d48;               /* Swiss Federal Red */
+      --accent-hover: #be123c;
+      --accent-subtle: #ffe4e6;
+      --accent-glow: rgba(225, 29, 72, 0.15);
+      --highlight-bg: rgba(225, 29, 72, 0.06);
+      --highlight-border: #e11d48;
+      --dock-bg: rgba(255, 255, 255, 0.96);
+      --code-bg: #f4f4f5;
+    }
+
+    body.theme-sepia {
+      /* Theme 4: Classical Book Sepia */
+      --bg-page: #f3ebda;
+      --bg-surface: #fbf7ee;
+      --bg-subtle: #e7dec9;
+      --text-primary: #382718;
+      --text-secondary: #654e38;
+      --text-muted: #947a61;
+      --border-rule: #dfd2b5;
+      --border-strong: #cfbe9b;
+      --accent: #9a4918;
+      --accent-hover: #7b380f;
+      --accent-subtle: #fae4c3;
+      --accent-glow: rgba(154, 73, 24, 0.15);
+      --highlight-bg: rgba(154, 73, 24, 0.08);
+      --highlight-border: #9a4918;
+      --dock-bg: rgba(243, 235, 218, 0.96);
+      --code-bg: #eae1cd;
+    }
+
+    body.theme-dark {
+      /* Theme 5: Deep OLED Black */
+      --bg-page: #000000;
+      --bg-surface: #0a0a0c;
+      --bg-subtle: #121216;
+      --text-primary: #ffffff;
+      --text-secondary: #a1a1aa;
+      --text-muted: #52525b;
+      --border-rule: #1e1e24;
+      --border-strong: #2e2e38;
+      --accent: #ff6224;
+      --accent-hover: #ff7844;
+      --accent-subtle: rgba(255, 98, 36, 0.16);
+      --accent-glow: rgba(255, 98, 36, 0.32);
+      --highlight-bg: rgba(255, 98, 36, 0.1);
+      --highlight-border: #ff6224;
+      --dock-bg: rgba(0, 0, 0, 0.96);
+      --code-bg: #0d0d10;
+    }
+
+    /* Accessibility: Respect Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      font-family: var(--font-reader);
+      font-size: var(--font-size-reader);
+      line-height: 1.76;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.25s ease;
+    }
+
+    .font-display { font-family: var(--font-display); }
+    .font-headline { font-family: var(--font-headline); }
+    .font-ui { font-family: var(--font-ui); }
+    .font-serif { font-family: var(--font-reader); }
+    .font-mono { font-family: var(--font-mono); }
+
+    a:focus-visible,
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    [tabindex="0"]:focus-visible {
+      outline: var(--focus-ring);
+      outline-offset: 2px;
+    }
+
+    .icon-svg {
+      width: 15px;
+      height: 15px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+      display: inline-block;
+      vertical-align: middle;
+      transition: transform 0.15s ease;
+    }
+    .icon-lg {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* =========================================================================
+       2. Studio Masthead (Architectural & Minimalist)
+       ========================================================================= */
+    .top-strip {
+      border-bottom: 1px solid var(--border-rule);
+      background-color: var(--dock-bg);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      transition: border-color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .top-strip-inner {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 0 1.75rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-block {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--text-primary);
+      transition: opacity 0.15s ease;
+    }
+    .brand-block:hover {
+      opacity: 0.9;
+    }
+
+    .brand-name {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.04em;
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.15rem;
+      line-height: 1;
+    }
+
+    .brand-name-sub {
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .brand-badge {
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border: 1px solid var(--border-rule);
+      border-radius: 9999px;
+      color: var(--text-secondary);
+      background-color: var(--bg-surface);
+      margin-left: 0.35rem;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-action {
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      height: 34px;
+      padding: 0 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-rule);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-action:hover {
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+      background-color: var(--bg-subtle);
+      transform: translateY(-1px);
+    }
+    .btn-action:active {
+      transform: translateY(0);
+    }
+
+    .btn-action.btn-highlight {
+      background-color: var(--accent-subtle);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+    .btn-action.btn-highlight:hover {
+      background-color: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 0 18px var(--accent-glow);
+    }
+
+    .status-indicator {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-rule);
+      color: var(--text-secondary);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #10b981;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    }
+
+    .status-dot.busy {
+      background-color: var(--accent);
+      box-shadow: 0 0 8px var(--accent-glow);
+      animation: pulse-busy 1.2s infinite ease-in-out;
+    }
+
+    .status-dot.error {
+      background-color: #ef4444;
+      box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+    }
+
+    @keyframes pulse-busy {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.85); }
+    }
+
+    /* =========================================================================
+       3. Command Rail & Hero Ingestion Deck
+       ========================================================================= */
+    .command-rail {
+      border-bottom: 1px solid var(--border-rule);
+      background-color: var(--bg-surface);
+      padding: 1.5rem 0 1.65rem;
+      position: relative;
+    }
+
+    .command-rail-inner {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 0 1.75rem;
+    }
+
+    .command-input-row {
+      display: flex;
+      align-items: center;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      background-color: var(--bg-page);
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .command-input-row:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .command-prefix {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 0 1rem;
+      color: var(--accent);
+      border-right: 1px solid var(--border-rule);
+      background-color: var(--bg-subtle);
+      height: 46px;
+      display: flex;
+      align-items: center;
+      user-select: none;
+    }
+
+    .url-input {
+      flex: 1;
+      height: 46px;
+      border: none;
+      outline: none;
+      background: transparent;
+      padding: 0 1.15rem;
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      color: var(--text-primary);
+    }
+
+    .url-input::placeholder {
+      color: var(--text-muted);
+      font-style: normal;
+    }
+
+    .btn-narrate {
+      height: 46px;
+      padding: 0 1.4rem;
+      background-color: var(--accent);
+      color: #ffffff;
+      border: none;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+      white-space: nowrap;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    .btn-narrate:hover:not(:disabled) {
+      background-color: var(--accent-hover);
+      box-shadow: 0 0 24px var(--accent-glow);
+      transform: translateY(-1px);
+    }
+    .btn-narrate:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-narrate:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .monograph-bar {
+      margin-top: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 11px;
+    }
+
+    .monograph-label {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 10.5px;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .monograph-item {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 4px 11px;
+      border: 1px solid var(--border-rule);
+      border-radius: 9999px;
+      background-color: var(--bg-surface);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      min-height: 28px;
+    }
+
+    .monograph-item:hover {
+      border-color: var(--text-secondary);
+      color: var(--text-primary);
+      background-color: var(--bg-subtle);
+    }
+
+    .monograph-item.active {
+      background-color: var(--accent-subtle);
+      color: var(--accent);
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* Autoplay Gesture Notification */
+    .gesture-notice {
+      display: none;
+      background-color: var(--accent-subtle);
+      border-bottom: 1px solid var(--accent);
+      padding: 0.75rem 1.75rem;
+      font-family: var(--font-ui);
+      font-size: 0.88rem;
+      color: var(--text-primary);
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* =========================================================================
+       4. Workstation Container & Hardware Acoustic Rack
+       ========================================================================= */
+    .workstation-container {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 2.5rem 1.75rem 9rem;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 3.5rem;
+      flex: 1;
+      width: 100%;
+    }
+
+    @media (max-width: 960px) {
+      .workstation-container {
+        grid-template-columns: 1fr;
+        gap: 2.25rem;
+        padding-bottom: 11rem;
+      }
+    }
+
+    /* Hardware Acoustic Rack (Left Column) */
+    .acoustic-deck {
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border-rule);
+      border-radius: 10px;
+      background-color: var(--bg-surface);
+      overflow: hidden;
+      height: fit-content;
+    }
+
+    .deck-section {
+      padding: 1.25rem;
+      border-bottom: 1px solid var(--border-rule);
+    }
+    .deck-section:last-child {
+      border-bottom: none;
+    }
+
+    .deck-header {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.95rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #spectrogramCanvas {
+      width: 100%;
+      height: 76px;
+      background-color: var(--bg-page);
+      border: 1px solid var(--border-rule);
+      border-radius: 6px;
+      display: block;
+      margin-bottom: 0.85rem;
+    }
+
+    .telemetry-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid var(--border-rule);
+      color: var(--text-secondary);
+    }
+    .telemetry-row:last-child {
+      border-bottom: none;
+    }
+
+    .telemetry-val {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .control-group {
+      margin-bottom: 1.1rem;
+    }
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .control-label {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 0.45rem;
+    }
+
+    .select-input {
+      width: 100%;
+      height: 38px;
+      padding: 0 0.75rem;
+      font-family: var(--font-ui);
+      font-size: 0.85rem;
+      background-color: var(--bg-page);
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      color: var(--text-primary);
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.15s ease;
+    }
+    .select-input:focus {
+      border-color: var(--accent);
+    }
+
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      font-family: var(--font-ui);
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .switch-label {
+      position: relative;
+      display: inline-block;
+      width: 38px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+    .switch-label input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .switch-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: var(--border-strong);
+      border-radius: 22px;
+      transition: 0.2s;
+    }
+    .switch-slider::before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      border-radius: 50%;
+      transition: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    input:checked + .switch-slider {
+      background-color: var(--accent);
+    }
+    input:checked + .switch-slider::before {
+      transform: translateX(16px);
+    }
+
+    .font-stepper {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+
+    .btn-stepper {
+      height: 34px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      border: 1px solid var(--border-rule);
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-stepper:hover {
+      border-color: var(--border-strong);
+      background-color: var(--bg-subtle);
+    }
+
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.45rem;
+    }
+
+    .theme-pill {
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid var(--border-rule);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .theme-pill:hover {
+      transform: translateY(-1px);
+    }
+    .theme-pill.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-glow);
+    }
+
+    .pill-archival { background-color: #f7f5f0; color: #121316; }
+    .pill-light    { background-color: #ffffff; color: #09090b; }
+    .pill-sepia    { background-color: #f3ebda; color: #382718; }
+    .pill-dark     { background-color: #08090d; color: #f6f8fc; }
+
+    /* =========================================================================
+       5. Monograph Reading Room (Right Column)
+       ========================================================================= */
+    .reading-room {
+      max-width: 68ch;
+      width: 100%;
+    }
+
+    .monograph-header {
+      margin-bottom: 2.75rem;
+      padding-bottom: 1.75rem;
+      border-bottom: 1px solid var(--border-rule);
+    }
+
+    .monograph-badges {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.65rem;
+      margin-bottom: 1rem;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .badge-tag {
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 4px;
+      border: 1px solid var(--border-rule);
+      background-color: var(--bg-surface);
+      color: var(--text-secondary);
+    }
+
+    .badge-podcast {
+      border-color: var(--accent);
+      color: var(--accent);
+      background-color: var(--accent-subtle);
+      font-weight: 700;
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    .monograph-headline {
+      font-family: var(--font-headline);
+      font-size: clamp(2.2rem, 4vw, 3.2rem);
+      font-weight: 600;
+      line-height: 1.15;
+      letter-spacing: -0.025em;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+      text-wrap: balance;
+    }
+
+    .monograph-byline {
+      font-family: var(--font-ui);
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .prose-container {
+      font-size: var(--font-size-reader);
+      line-height: 1.78;
+      color: var(--text-primary);
+    }
+
+    .prose-paragraph {
+      margin-bottom: 2rem;
+      transition: opacity 0.25s ease;
+    }
+
+    .sentence-span {
+      cursor: pointer;
+      border-radius: 4px;
+      padding: 3px 5px;
+      margin: 0 -3px;
+      opacity: 0.52;
+      transition: opacity 0.25s ease, background-color 0.2s ease, color 0.2s ease;
+      display: inline;
+    }
+
+    .sentence-span:hover {
+      opacity: 0.85;
+      background-color: var(--bg-subtle);
+    }
+
+    .sentence-span.active-sentence {
+      opacity: 1;
+      color: var(--text-primary);
+      background-color: var(--highlight-bg);
+      border-left: 3px solid var(--accent);
+      padding: 4px 8px 4px 10px;
+      margin-left: -13px;
+      border-radius: 0 4px 4px 0;
+      box-shadow: inset 0 0 16px var(--highlight-bg);
+      font-weight: 500;
+    }
+
+    /* Cadence markers */
+    .sentence-span[data-mood="question"] {
+      text-decoration-color: var(--accent);
+    }
+
+    body.is-focus-mode .prose-paragraph:not(.contains-active) {
+      opacity: 0.25;
+    }
+    body.is-focus-mode .prose-paragraph.contains-active {
+      opacity: 1;
+    }
+
+    .spoken-cue-card {
+      margin: 1.75rem 0;
+      padding: 1rem 1.35rem;
+      border-left: 3px solid var(--accent);
+      background-color: var(--bg-surface);
+      border-radius: 0 6px 6px 0;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    .empty-state {
+      padding: 5rem 2.5rem;
+      text-align: center;
+      border: 1px dashed var(--border-strong);
+      border-radius: 12px;
+      background-color: var(--bg-surface);
+    }
+
+    .empty-icon {
+      margin-bottom: 1.25rem;
+      color: var(--accent);
+    }
+
+    .empty-title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--text-primary);
+      margin-bottom: 0.65rem;
+    }
+
+    .empty-desc {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      max-width: 46ch;
+      margin: 0 auto 1.75rem;
+      line-height: 1.6;
+    }
+
+    /* =========================================================================
+       6. Master Tactile Transport Dock
+       ========================================================================= */
+    .transport-dock {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background-color: var(--dock-bg);
+      border-top: 1px solid var(--border-rule);
+      box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      z-index: 100;
+      padding: 0.75rem 0 0.95rem;
+    }
+
+    .transport-dock-inner {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 0 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .scrubber-wrap {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      width: 100%;
+    }
+
+    .scrubber-track {
+      flex: 1;
+      height: 5px;
+      background-color: var(--border-strong);
+      border-radius: 9999px;
+      position: relative;
+      cursor: pointer;
+      overflow: hidden;
+      transition: height 0.15s ease;
+    }
+    .scrubber-track:hover {
+      height: 7px;
+    }
+
+    .scrubber-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      background-color: var(--accent);
+      width: 0%;
+      border-radius: 9999px;
+      transition: width 0.1s linear;
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    .scrubber-time {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      min-width: 75px;
+      text-align: right;
+    }
+
+    .dock-main-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .dock-title-block {
+      max-width: 340px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .dock-title {
+      font-family: var(--font-ui);
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dock-status-text {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dock-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn-transport {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid var(--border-rule);
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-transport:hover:not(:disabled) {
+      border-color: var(--border-strong);
+      color: var(--accent);
+      transform: scale(1.05);
+    }
+    .btn-transport:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+
+    .btn-transport:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .btn-play-hero {
+      width: 48px;
+      height: 48px;
+      background-color: var(--accent);
+      color: #ffffff;
+      border: none;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+    .btn-play-hero:hover:not(:disabled) {
+      background-color: var(--accent-hover);
+      box-shadow: 0 0 28px var(--accent-glow);
+      transform: scale(1.06);
+    }
+    .btn-play-hero:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+
+    .dock-shortcuts-pill {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--text-muted);
+      border: 1px solid var(--border-rule);
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background-color: var(--bg-surface);
+    }
+
+    /* =========================================================================
+       7. Modals, Drawers & System Toast
+       ========================================================================= */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.65);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 540px;
+      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modal-enter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes modal-enter {
+      from { opacity: 0; transform: scale(0.96) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .modal-head {
+      padding: 1.15rem 1.35rem;
+      border-bottom: 1px solid var(--border-rule);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--font-ui);
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-primary);
+    }
+
+    .modal-content {
+      padding: 1.35rem;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+
+    .modal-foot {
+      padding: 1rem 1.35rem;
+      border-top: 1px solid var(--border-rule);
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.65rem;
+      background-color: var(--bg-page);
+    }
+
+    .modal-textarea {
+      width: 100%;
+      height: 95px;
+      padding: 0.75rem;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      outline: none;
+      resize: vertical;
+      line-height: 1.5;
+    }
+    .modal-textarea:focus {
+      border-color: var(--accent);
+    }
+
+    .toast-box {
+      position: fixed;
+      bottom: 88px;
+      right: 24px;
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border-strong);
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      z-index: 300;
+      display: none;
+      transition: opacity 0.2s ease;
+    }
+  </style>
+</head>
+<body class="font-serif theme-dark">
+
+  <!-- =========================================================================
+       1. Studio Masthead (THEYA.audio Brand Identity & Hardware Telemetry)
+       ========================================================================= -->
+  <header class="top-strip" role="banner">
+    <div class="top-strip-inner">
+      <a href="/" class="brand-block" aria-label="they.audio home">
+        <span class="brand-name">
+          THEYA<span class="brand-name-sub">.audio</span>
+        </span>
+        <span class="brand-badge">Acoustic Studio · theya.voice v2.2</span>
+      </a>
+
+      <div class="top-actions">
+        <button id="uploadDocBtn" class="btn-action btn-highlight" title="Upload Document, Screenshot, or Paste Script">
+          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          Ingest Studio
+        </button>
+        <button id="libraryBtn" class="btn-action" title="Reading Library &amp; History">
+          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          Archive
+        </button>
+        <button id="bookmarkletBtn" class="btn-action" title="Browser Bookmarklet">
+          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+          Bookmarklet
+        </button>
+        <button id="feedbackBtn" class="btn-action" title="Acoustic Feedback">
+          <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          Feedback
+        </button>
+        <div id="statusBadge" class="status-indicator">
+          <span id="statusDot" class="status-dot"></span>
+          <span id="statusText">24kHz PCM</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       2. Hero Ingestion Deck (URL Stream & Curated Monograph Catalog)
+       ========================================================================= -->
+  <section class="command-rail">
+    <div class="command-rail-inner">
+      <form id="extractForm">
+        <div class="command-input-row">
+          <span class="command-prefix">BROADCAST ➔</span>
+          <input
+            type="url"
+            id="urlInput"
+            class="url-input"
+            placeholder="Paste Substack, Medium, research paper, essay, or documentation URL..."
+            required
+            autocomplete="off"
+          />
+          <button type="button" id="pasteClipboardBtn" class="btn-action" style="border:none; height:46px; border-left:1px solid var(--border-rule); border-radius:0; padding:0 14px;" title="Paste from clipboard">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+            Paste
+          </button>
+          <button type="submit" id="extractBtn" class="btn-narrate">
+            <svg class="icon-svg" viewBox="0 0 24 24" style="stroke-width:2.2;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            NARRATE PROSE ↵
+          </button>
+        </div>
+      </form>
+
+      <!-- Curated Monographs Catalog -->
+      <div class="monograph-bar">
+        <span class="monograph-label">Curated Monographs:</span>
+        <button type="button" class="monograph-item active sample-pill" data-url="https://departmentofproduct.substack.com/p/product-taste-in-practice">
+          01 / Rich Holmes — “Product Taste” in Practice
+        </button>
+        <button type="button" class="monograph-item sample-pill" data-url="https://paulgraham.com/greatwork.html">
+          02 / Paul Graham — How to Do Great Work
+        </button>
+        <button type="button" class="monograph-item sample-pill" data-url="https://karpathy.medium.com/software-2-0-a64111b0c352">
+          03 / Andrej Karpathy — Software 2.0
+        </button>
+        <button type="button" class="monograph-item sample-pill" data-url="https://stripe.com/press">
+          04 / Stripe Press — Ideas for Progress
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Autoplay User-Gesture Banner -->
+  <div id="gestureNotice" class="gesture-notice">
+    <div><strong>Ready to stream.</strong> Click below or press Spacebar to start narration.</div>
+    <button id="gestureStartBtn" class="btn-narrate" style="height:32px; padding:0 14px; font-size:0.75rem;">
+      <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+      Tap to Listen
+    </button>
+  </div>
+
+  <!-- =========================================================================
+       3. Asymmetric Workstation (Hardware Acoustic Rack + Reading Room)
+       ========================================================================= -->
+  <main class="workstation-container" role="main">
+
+    <!-- Left Rail: Hardware Acoustic Rack -->
+    <aside class="acoustic-deck" aria-label="SpeechBrain acoustic inspection">
+      <!-- Live FFT Spectrogram -->
+      <div class="deck-section">
+        <div class="deck-header">
+          <span>Acoustic Oscilloscope</span>
+          <span style="color:var(--accent);">FFT 32-BIN</span>
+        </div>
+        <canvas id="spectrogramCanvas" width="288" height="76" title="Real-time Web Audio API FFT spectrum"></canvas>
+        <div class="telemetry-row">
+          <span>Acoustic Engine</span>
+          <span class="telemetry-val">SpeechBrain Neural</span>
+        </div>
+        <div class="telemetry-row">
+          <span>Sampling Rate</span>
+          <span class="telemetry-val">24 kHz / 16-bit PCM</span>
+        </div>
+        <div class="telemetry-row">
+          <span>Lookahead Buffer</span>
+          <span id="lookaheadBufferText" class="telemetry-val">Buffer: Idle</span>
+        </div>
+        <div class="telemetry-row">
+          <span>Streaming Latency</span>
+          <span class="telemetry-val">~310ms TTFB</span>
+        </div>
+      </div>
+
+      <!-- Cozy White Noise Ambient Bed -->
+      <div class="deck-section">
+        <div class="deck-header">
+          <span>Cozy Atmosphere</span>
+          <span style="color:var(--accent);">WHITE NOISE</span>
+        </div>
+
+        <div class="control-group">
+          <label for="ambientSelect" class="control-label">Ambient Soundscape</label>
+          <select id="ambientSelect" class="select-input">
+            <option value="none">Off (Pure Voice)</option>
+            <option value="rain">Gentle Rain on Window</option>
+            <option value="thunder">Cozy Thunderstorm</option>
+            <option value="fire">Fireplace Crackle</option>
+            <option value="library">Quiet Study &amp; Library Hum</option>
+            <option value="fan">Ceiling Fan &amp; AC Hum</option>
+            <option value="brown">Deep Brown Noise (Airplane/Sleep)</option>
+            <option value="wind">Night Forest Breeze</option>
+            <option value="vinyl">Lo-Fi Vinyl Warmth</option>
+            <option value="coffee">Cozy Coffeehouse Atmosphere</option>
+            <option value="waves">Midnight Ocean Surf &amp; Waves</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
+            <span class="control-label">Ambient Volume</span>
+            <span id="ambientVolumeVal" class="font-mono" style="font-size:11px; color:var(--text-secondary);">18%</span>
+          </div>
+          <input type="range" id="ambientVolumeSlider" min="0" max="100" value="18" class="select-input" style="height:26px; padding:0; accent-color:var(--accent);" />
+        </div>
+      </div>
+
+      <!-- Neural Controls -->
+      <div class="deck-section">
+        <div class="deck-header">
+          <span>Voice &amp; Prosody</span>
+          <span>SETTINGS</span>
+        </div>
+
+        <div class="control-group">
+          <label for="voiceSelect" class="control-label">Neural Speaker</label>
+          <select id="voiceSelect" class="select-input">
+            <option value="en-US-AndrewMultilingualNeural">Andrew (US / Natural Studio)</option>
+            <option value="en-US-AriaNeural">Aria (US / Expressive)</option>
+            <option value="en-GB-RyanNeural">Ryan (UK / Monograph)</option>
+            <option value="en-IN-NeerjaNeural">Neerja (India / Melodic)</option>
+            <option value="en-IN-MadhurNeural">Madhur (India / Clear)</option>
+            <option value="fr-FR-KillianNeural">Killian (France / Continental)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="rateSelect" class="control-label">Reading Pace</label>
+          <select id="rateSelect" class="select-input">
+            <option value="-15%">-15% (Reflective / Dense)</option>
+            <option value="+0%" selected>1.0x (Standard Editorial / ~155 wpm)</option>
+            <option value="+15%">+15% (Brisk / 180 wpm)</option>
+            <option value="+30%">+30% (Speed Listening / 200 wpm)</option>
+            <option value="+50%">+50% (Skimming / 230 wpm)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Ergonomics & Focus -->
+      <div class="deck-section">
+        <div class="deck-header">
+          <span>Reading Ergonomics</span>
+          <span>MODES</span>
+        </div>
+
+        <div class="toggle-row">
+          <span>Focus Mode (Dim peripheral)</span>
+          <label class="switch-label">
+            <input type="checkbox" id="focusModeToggle" />
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <span>Auto-Scroll with Speech</span>
+          <label class="switch-label">
+            <input type="checkbox" id="autoScrollToggle" checked />
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <div class="control-group" style="margin-top:0.75rem;">
+          <span class="control-label">Type Scale</span>
+          <div class="font-stepper">
+            <button id="fontDecBtn" class="btn-stepper" title="Decrease font size">A-</button>
+            <button id="fontIncBtn" class="btn-stepper" title="Increase font size">A+</button>
+          </div>
+        </div>
+
+        <div class="control-group" style="margin-top:0.75rem;">
+          <span class="control-label">Studio Canvas Palette</span>
+          <div class="theme-grid">
+            <button class="theme-pill pill-dark active" data-theme="dark" title="Obsidian Studio">Noir</button>
+            <button class="theme-pill pill-archival" data-theme="archival" title="Archival Paper">Paper</button>
+            <button class="theme-pill pill-light" data-theme="light" title="Clean Daylight">Polar</button>
+            <button class="theme-pill pill-sepia" data-theme="sepia" title="Book Sepia">Sepia</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center Column: 68ch Editorial Reading Room -->
+    <section class="reading-room" aria-label="Monograph reading canvas">
+
+      <!-- Monograph Metadata Header -->
+      <header id="articleHeader" class="monograph-header" style="display: none;">
+        <div class="monograph-badges">
+          <span id="articleDomainBadge" class="badge-tag font-mono">EDITORIAL</span>
+          <span id="articleCadenceBadge" class="badge-tag badge-podcast font-mono" style="display:none;">PODCAST CADENCE ACTIVE</span>
+          <span id="articleSentenceBadge" class="badge-tag font-mono">0 SENTENCES</span>
+          <span id="articleTimeBadge" class="badge-tag font-mono">~0 MIN AUDIO</span>
+        </div>
+        <h1 id="articleHeadline" class="monograph-headline"></h1>
+        <div id="articleByline" class="monograph-byline"></div>
+      </header>
+
+      <!-- Prose Paragraphs & Sentences -->
+      <article id="proseContainer" class="prose-container">
+        <div class="empty-state">
+          <div class="empty-icon">
+            <svg class="icon-svg icon-lg" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+          </div>
+          <h2 class="empty-title">Acoustic Monograph &amp; Podcast Studio</h2>
+          <p class="empty-desc">
+            Drop PDFs, Word documents, screenshots, paste raw notes, or broadcast any URL into natural podcast speech with deliberate breathing room and cozy soundscapes.
+          </p>
+          <div style="display:flex; justify-content:center; gap:0.75rem;">
+            <button type="button" id="emptyUploadBtn" class="btn-action btn-highlight" style="height:38px; padding:0 16px; display:inline-flex; align-items:center; gap:6px;">
+              <svg class="icon-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+              <span>Ingest Document / Screenshot</span>
+            </button>
+            <button type="button" class="btn-narrate sample-pill" data-url="https://departmentofproduct.substack.com/p/product-taste-in-practice">
+              Load "Product Taste" &rarr;
+            </button>
+          </div>
+        </div>
+      </article>
+
+    </section>
+  </main>
+
+  <!-- =========================================================================
+       4. Floating Tactile Transport Dock
+       ========================================================================= -->
+  <footer class="transport-dock" role="region" aria-label="Audio playback controls">
+    <div class="transport-dock-inner">
+      <div class="scrubber-wrap">
+        <div id="scrubberTrack" class="scrubber-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div id="scrubberFill" class="scrubber-fill"></div>
+        </div>
+        <div id="scrubberTime" class="scrubber-time">0 / 0</div>
+      </div>
+
+      <div class="dock-main-row">
+        <div class="dock-title-block">
+          <div id="dockArticleTitle" class="dock-title">No monograph loaded</div>
+          <div id="dockSentenceSnippet" class="dock-status-text">Select or paste a link to begin listening</div>
+        </div>
+
+        <div class="dock-controls">
+          <button id="prevBtn" class="btn-transport" disabled aria-label="Previous sentence" title="Previous (Left Arrow)">
+            <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+          </button>
+          <button id="playPauseBtn" class="btn-transport btn-play-hero" disabled aria-label="Play or pause" title="Play / Pause (Spacebar)">
+            <svg id="playIconSvg" class="icon-svg" viewBox="0 0 24 24" style="margin-left:2px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <svg id="pauseIconSvg" class="icon-svg" viewBox="0 0 24 24" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+          </button>
+          <button id="nextBtn" class="btn-transport" disabled aria-label="Next sentence" title="Next (Right Arrow)">
+            <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+          </button>
+        </div>
+
+        <div class="dock-shortcuts-pill">
+          <span>Space (Play) · ← / → (Seek) · F (Focus) · Background Audio Active</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =========================================================================
+       5. Accessible Modals (Document Ingestion, Library, Bookmarklet, Feedback)
+       ========================================================================= -->
+  <!-- Document Upload & Paste Modal -->
+  <div id="uploadModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
+    <div class="modal-card" style="max-width:580px;">
+      <div class="modal-head">
+        <span id="uploadTitle">Ingest Document / Screenshot OCR</span>
+        <button class="btn-action close-modal" style="padding:2px 8px;">✕</button>
+      </div>
+      
+      <div style="display:flex; border-bottom:1px solid var(--border-rule); background-color:var(--bg-subtle);">
+        <button id="tabUploadFileBtn" class="btn-action" style="flex:1; border:none; border-radius:0; border-bottom:2px solid var(--accent); background:transparent; font-weight:700; height:40px;">Upload File / Screenshot</button>
+        <button id="tabPasteTextBtn" class="btn-action" style="flex:1; border:none; border-radius:0; background:transparent; font-weight:600; height:40px;">Paste Text / Notes</button>
+      </div>
+
+      <div class="modal-content">
+        <!-- File Upload Pane -->
+        <div id="paneUploadFile">
+          <div id="dropzone" style="border:1.5px dashed var(--border-strong); border-radius:8px; padding:2.25rem 1.5rem; text-align:center; cursor:pointer; background-color:var(--bg-page); transition:border-color 0.2s;">
+            <input type="file" id="fileInput" accept=".pdf,.docx,.doc,.txt,.md,.markdown,.png,.jpg,.jpeg,.webp" style="display:none;" />
+            <svg class="icon-svg icon-lg" viewBox="0 0 24 24" style="margin-bottom:0.75rem; color:var(--accent);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <div style="font-family:var(--font-ui); font-weight:700; font-size:0.95rem; margin-bottom:0.35rem; color:var(--text-primary);">Drag &amp; drop document or screenshot here</div>
+            <div style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted); margin-bottom:0.85rem;">PDF, Word (.docx), Markdown (.md), Text, &amp; Screenshots (OCR) · or Cmd+V to paste screenshot</div>
+            <button type="button" class="btn-action" id="browseFileBtn" style="margin:0 auto;">Browse Local File</button>
+          </div>
+          <div id="selectedFileInfo" style="display:none; margin-top:1rem; padding:0.65rem 0.85rem; border:1px solid var(--border-rule); border-radius:6px; font-family:var(--font-mono); font-size:11px; color:var(--text-primary); justify-content:space-between; align-items:center;">
+            <span id="selectedFileName">file.pdf</span>
+            <span id="selectedFileSize" style="color:var(--text-muted);">0 KB</span>
+          </div>
+        </div>
+
+        <!-- Paste Text Pane -->
+        <div id="panePasteText" style="display:none;">
+          <div style="margin-bottom:0.75rem;">
+            <label class="control-label" for="pasteTitleInput">Monograph Title (Optional)</label>
+            <input type="text" id="pasteTitleInput" class="select-input" placeholder="e.g. Acoustic Architecture &amp; Soundscapes" />
+          </div>
+          <div>
+            <label class="control-label" for="pasteContentArea">Document / Script Text</label>
+            <textarea id="pasteContentArea" class="modal-textarea" style="height:140px;" placeholder="Paste article prose, research notes, book excerpt, or podcast script here..."></textarea>
+          </div>
+        </div>
+
+        <!-- Podcast Mode Option -->
+        <div style="margin-top:1.25rem; padding-top:0.85rem; border-top:1px solid var(--border-rule); display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-family:var(--font-ui); font-size:0.85rem; font-weight:700; color:var(--text-primary);">Human Podcast Cadence</div>
+            <div style="font-family:var(--font-mono); font-size:10.5px; color:var(--text-muted);">Injects natural pauses, dramatic breathing breaks &amp; reflective question inflections</div>
+          </div>
+          <label class="switch-label">
+            <input type="checkbox" id="podcastModeToggle" checked />
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button id="submitUploadBtn" class="btn-narrate" style="height:36px; padding:0 18px; font-size:0.8rem;">
+          Generate &amp; Play Podcast ↵
+        </button>
+        <button class="btn-action close-modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Library Drawer -->
+  <div id="libraryModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="libTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <span id="libTitle">Archive &amp; Reading History</span>
+        <button class="btn-action close-modal" style="padding:2px 8px;">✕</button>
+      </div>
+      <div class="modal-content" id="libraryList">
+        <p style="color:var(--text-muted); font-size:0.85rem; font-family:var(--font-mono);">Loading reading history...</p>
+      </div>
+      <div class="modal-foot">
+        <button id="clearLibraryBtn" class="btn-action" style="font-size:0.75rem;">Clear History</button>
+        <button class="btn-narrate close-modal" style="height:32px; padding:0 14px; font-size:0.75rem;">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bookmarklet Modal -->
+  <div id="bookmarkletModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="bmTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <span id="bmTitle">1-Click Browser Bookmarklet</span>
+        <button class="btn-action close-modal" style="padding:2px 8px;">✕</button>
+      </div>
+      <div class="modal-content">
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">
+          Drag this code to your browser bookmarks bar to turn any webpage into a narration stream:
+        </p>
+        <textarea id="bookmarkletCode" class="modal-textarea" readonly></textarea>
+      </div>
+      <div class="modal-foot">
+        <button id="copyBookmarkletBtn" class="btn-narrate" style="height:32px; padding:0 14px; font-size:0.75rem;">Copy Code</button>
+        <button class="btn-action close-modal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feedback Modal -->
+  <div id="feedbackModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="fbTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <span id="fbTitle">Narration Quality &amp; Feedback</span>
+        <button class="btn-action close-modal" style="padding:2px 8px;">✕</button>
+      </div>
+      <div class="modal-content">
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">How natural was the speech prosody and pacing?</p>
+        <div style="font-size:1.6rem; cursor:pointer; margin-bottom:14px; color:#ff6224;" id="starCluster">
+          <span class="star-item active" data-rating="1">★</span>
+          <span class="star-item active" data-rating="2">★</span>
+          <span class="star-item active" data-rating="3">★</span>
+          <span class="star-item active" data-rating="4">★</span>
+          <span class="star-item active" data-rating="5">★</span>
+        </div>
+        <textarea id="feedbackComment" class="modal-textarea" placeholder="Notes on pronunciation, pacing, or extraction quality..."></textarea>
+      </div>
+      <div class="modal-foot">
+        <button id="submitFeedbackBtn" class="btn-narrate" style="height:32px; padding:0 14px; font-size:0.75rem;">Submit Feedback</button>
+        <button class="btn-action close-modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast-box" role="status" aria-live="polite"></div>
+
+  <!-- =========================================================================
+       6. Application Engine (SpeechBrain Engine + Procedural Ambient + Background Session)
+       ========================================================================= -->
+  <script>
+    // -------------------------------------------------------------------------
+    // 1. Discriminated Union State Machine
+    // -------------------------------------------------------------------------
+    const AppState = Object.freeze({
+      IDLE: "idle",
+      EXTRACTING: "extracting",
+      READY: "ready",
+      BUFFERING: "buffering",
+      PLAYING: "playing",
+      PAUSED: "paused",
+      ERROR: "error",
+    });
+
+    let state = {
+      status: AppState.IDLE,
+      article: null,
+      sentences: [],
+      currentIndex: 0,
+      generation: 0,
+      autoScroll: true,
+      focusMode: false,
+      voice: "en-US-AndrewMultilingualNeural",
+      rate: "+0%",
+      ambient: "none",
+      ambientVolume: 0.18,
+    };
+
+    const audioBlobCache = new Map();
+    const inflightPrefetches = new Map();
+
+    // DOM Elements
+    const urlInput = document.getElementById("urlInput");
+    const extractForm = document.getElementById("extractForm");
+    const extractBtn = document.getElementById("extractBtn");
+    const pasteClipboardBtn = document.getElementById("pasteClipboardBtn");
+    const articleHeader = document.getElementById("articleHeader");
+    const articleHeadline = document.getElementById("articleHeadline");
+    const articleByline = document.getElementById("articleByline");
+    const articleDomainBadge = document.getElementById("articleDomainBadge");
+    const articleCadenceBadge = document.getElementById("articleCadenceBadge");
+    const articleSentenceBadge = document.getElementById("articleSentenceBadge");
+    const articleTimeBadge = document.getElementById("articleTimeBadge");
+    const proseContainer = document.getElementById("proseContainer");
+    const playPauseBtn = document.getElementById("playPauseBtn");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const playIconSvg = document.getElementById("playIconSvg");
+    const pauseIconSvg = document.getElementById("pauseIconSvg");
+    const scrubberTrack = document.getElementById("scrubberTrack");
+    const scrubberFill = document.getElementById("scrubberFill");
+    const scrubberTime = document.getElementById("scrubberTime");
+    const dockArticleTitle = document.getElementById("dockArticleTitle");
+    const dockSentenceSnippet = document.getElementById("dockSentenceSnippet");
+    const lookaheadBufferText = document.getElementById("lookaheadBufferText");
+    const statusDot = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
+    const voiceSelect = document.getElementById("voiceSelect");
+    const rateSelect = document.getElementById("rateSelect");
+    const ambientSelect = document.getElementById("ambientSelect");
+    const ambientVolumeSlider = document.getElementById("ambientVolumeSlider");
+    const ambientVolumeVal = document.getElementById("ambientVolumeVal");
+    const focusModeToggle = document.getElementById("focusModeToggle");
+    const autoScrollToggle = document.getElementById("autoScrollToggle");
+    const fontIncBtn = document.getElementById("fontIncBtn");
+    const fontDecBtn = document.getElementById("fontDecBtn");
+    const gestureNotice = document.getElementById("gestureNotice");
+    const gestureStartBtn = document.getElementById("gestureStartBtn");
+    const spectrogramCanvas = document.getElementById("spectrogramCanvas");
+    const toast = document.getElementById("toast");
+
+    // Audio Elements & Nodes
+    let audioPlayer = new Audio();
+    let audioCtx = null;
+    let analyserNode = null;
+    let mediaSourceNode = null;
+    let animFrameId = null;
+
+    // Toast Notification
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.style.display = "block";
+      setTimeout(() => { toast.style.display = "none"; }, 3200);
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. Procedural Web Audio Ambient Soundscapes (Cozy White Noise Engine)
+    // -------------------------------------------------------------------------
+    class AmbientSoundscapeEngine {
+      constructor() {
+        this.ctx = null;
+        this.masterGain = null;
+        this.activeNodes = [];
+        this.currentSound = "none";
+      }
+
+      init(audioContext) {
+        this.ctx = audioContext;
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.setValueAtTime(state.ambientVolume, this.ctx.currentTime);
+        this.masterGain.connect(this.ctx.destination);
+      }
+
+      setVolume(val) {
+        if (!this.masterGain || !this.ctx) return;
+        this.masterGain.gain.setTargetAtTime(val, this.ctx.currentTime, 0.08);
+      }
+
+      stop() {
+        this.activeNodes.forEach(node => {
+          try {
+            if (node.stop) node.stop();
+            node.disconnect();
+          } catch(e) {}
+        });
+        this.activeNodes = [];
+        this.currentSound = "none";
+      }
+
+      play(soundType) {
+        if (!this.ctx) return;
+        this.stop();
+        if (soundType === "none") return;
+        this.currentSound = soundType;
+
+        const bufferSize = this.ctx.sampleRate * 2; // 2 second buffer
+
+        if (soundType === "rain") {
+          // Gentle Rain: Pink noise through bandpass with periodic raindrop clicks
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          let b0 = 0, b1 = 0, b2 = 0;
+          for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            b0 = 0.99886 * b0 + white * 0.0555179;
+            b1 = 0.99332 * b1 + white * 0.0750759;
+            b2 = 0.96900 * b2 + white * 0.1538520;
+            data[i] = (b0 + b1 + b2) * 0.22;
+          }
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = buffer;
+          noise.loop = true;
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = "bandpass";
+          filter.frequency.value = 1100;
+          filter.Q.value = 0.9;
+
+          noise.connect(filter);
+          filter.connect(this.masterGain);
+          noise.start();
+          this.activeNodes.push(noise, filter);
+
+        } else if (soundType === "thunder") {
+          // Distant Thunderstorm: Rain bed + periodic deep 50Hz rolling thunder
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * 0.15;
+          }
+          const rain = this.ctx.createBufferSource();
+          rain.buffer = buffer;
+          rain.loop = true;
+          const rainFilter = this.ctx.createBiquadFilter();
+          rainFilter.type = "lowpass";
+          rainFilter.frequency.value = 900;
+          rain.connect(rainFilter);
+          rainFilter.connect(this.masterGain);
+          rain.start();
+          this.activeNodes.push(rain, rainFilter);
+
+          // Deep rolling thunder generator
+          const osc = this.ctx.createOscillator();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(48, this.ctx.currentTime);
+          const thunderGain = this.ctx.createGain();
+          thunderGain.gain.setValueAtTime(0.02, this.ctx.currentTime);
+          osc.connect(thunderGain);
+          thunderGain.connect(this.masterGain);
+          osc.start();
+          this.activeNodes.push(osc, thunderGain);
+
+        } else if (soundType === "fire") {
+          // Fireplace: Warm low rumble + Poisson crackles
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          let last = 0;
+          for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            last = (last + (0.02 * white)) / 1.02;
+            let crackle = 0;
+            if (Math.random() < 0.0018) {
+              crackle = (Math.random() * 2 - 1) * 0.8;
+            }
+            data[i] = last * 1.5 + crackle;
+          }
+          const fire = this.ctx.createBufferSource();
+          fire.buffer = buffer;
+          fire.loop = true;
+          fire.connect(this.masterGain);
+          fire.start();
+          this.activeNodes.push(fire);
+
+        } else if (soundType === "brown") {
+          // Deep Brown Noise: 1/f^2 soothing acoustic bed
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          let last = 0;
+          for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            last = (last + (0.02 * white)) / 1.02;
+            data[i] = last * 2.8;
+          }
+          const brown = this.ctx.createBufferSource();
+          brown.buffer = buffer;
+          brown.loop = true;
+          brown.connect(this.masterGain);
+          brown.start();
+          this.activeNodes.push(brown);
+
+        } else if (soundType === "fan") {
+          // Ceiling Fan & AC Hum: 60Hz hum + smooth rotary airflow
+          const osc1 = this.ctx.createOscillator();
+          osc1.frequency.value = 60;
+          const osc2 = this.ctx.createOscillator();
+          osc2.frequency.value = 120;
+          const humGain = this.ctx.createGain();
+          humGain.gain.value = 0.05;
+          osc1.connect(humGain);
+          osc2.connect(humGain);
+
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * 0.12;
+          }
+          const air = this.ctx.createBufferSource();
+          air.buffer = buffer;
+          air.loop = true;
+          const airFilter = this.ctx.createBiquadFilter();
+          airFilter.type = "lowpass";
+          airFilter.frequency.value = 260;
+          air.connect(airFilter);
+
+          humGain.connect(this.masterGain);
+          airFilter.connect(this.masterGain);
+          osc1.start();
+          osc2.start();
+          air.start();
+          this.activeNodes.push(osc1, osc2, humGain, air, airFilter);
+
+        } else if (soundType === "library") {
+          // Quiet Library: Warm low-pass hum with soft acoustics
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * 0.15;
+          }
+          const lib = this.ctx.createBufferSource();
+          lib.buffer = buffer;
+          lib.loop = true;
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = "lowpass";
+          filter.frequency.value = 340;
+          filter.Q.value = 1.4;
+          lib.connect(filter);
+          filter.connect(this.masterGain);
+          lib.start();
+          this.activeNodes.push(lib, filter);
+
+        } else if (soundType === "wind") {
+          // Night Forest Breeze: LFO-modulated pink noise
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          let b0 = 0, b1 = 0;
+          for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            b0 = 0.998 * b0 + white * 0.055;
+            b1 = 0.993 * b1 + white * 0.075;
+            data[i] = (b0 + b1) * 0.2;
+          }
+          const wind = this.ctx.createBufferSource();
+          wind.buffer = buffer;
+          wind.loop = true;
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = "bandpass";
+          filter.frequency.value = 400;
+          wind.connect(filter);
+          filter.connect(this.masterGain);
+          wind.start();
+          this.activeNodes.push(wind, filter);
+
+        } else if (soundType === "vinyl") {
+          // Lo-Fi Vinyl: Analog low warmth + periodic subtle clicks
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            let crackle = 0;
+            if (Math.random() < 0.0006) crackle = (Math.random() * 2 - 1) * 0.6;
+            data[i] = (Math.random() * 2 - 1) * 0.04 + crackle;
+          }
+          const vinyl = this.ctx.createBufferSource();
+          vinyl.buffer = buffer;
+          vinyl.loop = true;
+          vinyl.connect(this.masterGain);
+          vinyl.start();
+          this.activeNodes.push(vinyl);
+
+        } else if (soundType === "coffee") {
+          // Cozy Coffeehouse: Diffused warm murmurs + gentle mid-frequency room acoustics
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          let b0 = 0, b1 = 0;
+          for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            b0 = 0.995 * b0 + white * 0.06;
+            b1 = 0.985 * b1 + white * 0.08;
+            data[i] = (b0 + b1) * 0.18;
+          }
+          const coffee = this.ctx.createBufferSource();
+          coffee.buffer = buffer;
+          coffee.loop = true;
+          const bandpass = this.ctx.createBiquadFilter();
+          bandpass.type = "bandpass";
+          bandpass.frequency.value = 650;
+          bandpass.Q.value = 1.2;
+          coffee.connect(bandpass);
+          bandpass.connect(this.masterGain);
+          coffee.start();
+          this.activeNodes.push(coffee, bandpass);
+
+        } else if (soundType === "waves") {
+          // Midnight Ocean Surf: Slow sinusoidal swell mimicking rolling ocean waves
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          let last = 0;
+          for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            last = (last + (0.025 * white)) / 1.025;
+            data[i] = last * 2.2;
+          }
+          const surf = this.ctx.createBufferSource();
+          surf.buffer = buffer;
+          surf.loop = true;
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = "lowpass";
+          filter.frequency.value = 420;
+
+          const swellGain = this.ctx.createGain();
+          swellGain.gain.value = 0.5;
+
+          const lfo = this.ctx.createOscillator();
+          lfo.frequency.value = 0.11; // 9-second slow ocean wave cycle
+          const lfoGain = this.ctx.createGain();
+          lfoGain.gain.value = 0.35;
+          lfo.connect(lfoGain);
+          lfoGain.connect(swellGain.gain);
+
+          surf.connect(filter);
+          filter.connect(swellGain);
+          swellGain.connect(this.masterGain);
+
+          surf.start();
+          lfo.start();
+          this.activeNodes.push(surf, filter, swellGain, lfo, lfoGain);
+        }
+      }
+    }
+
+    const ambientEngine = new AmbientSoundscapeEngine();
+
+    // -------------------------------------------------------------------------
+    // 3. Web Audio API & Canvas Spectrogram
+    // -------------------------------------------------------------------------
+    function initWebAudio() {
+      if (audioCtx) return;
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        audioCtx = new AudioContextClass();
+        analyserNode = audioCtx.createAnalyser();
+        analyserNode.fftSize = 64;
+        analyserNode.smoothingTimeConstant = 0.8;
+
+        mediaSourceNode = audioCtx.createMediaElementSource(audioPlayer);
+        mediaSourceNode.connect(analyserNode);
+        analyserNode.connect(audioCtx.destination);
+
+        ambientEngine.init(audioCtx);
+        if (state.ambient !== "none") {
+          ambientEngine.play(state.ambient);
+        }
+
+        drawSpectrogram();
+      } catch (err) {
+        console.warn("Web Audio API initialization deferred:", err);
+      }
+    }
+
+    function drawSpectrogram() {
+      if (!spectrogramCanvas) return;
+      const ctx = spectrogramCanvas.getContext("2d");
+      const width = spectrogramCanvas.width;
+      const height = spectrogramCanvas.height;
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      if (!analyserNode || prefersReducedMotion) {
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue("--border-rule").trim() || "#e5e0d8";
+        ctx.fillRect(0, height - 3, width, 3);
+        if (state.status === AppState.PLAYING) {
+          ctx.fillStyle = getComputedStyle(document.body).getPropertyValue("--accent").trim() || "#b45309";
+          ctx.fillRect(0, height - 3, width * 0.5, 3);
+        }
+        animFrameId = requestAnimationFrame(drawSpectrogram);
+        return;
+      }
+
+      const bufferLength = analyserNode.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      analyserNode.getByteFrequencyData(dataArray);
+
+      ctx.clearRect(0, 0, width, height);
+      const barWidth = (width / bufferLength) * 0.82;
+      const barGap = (width / bufferLength) * 0.18;
+      let x = 0;
+
+      const accentColor = getComputedStyle(document.body).getPropertyValue("--accent").trim() || "#b45309";
+      const mutedColor = getComputedStyle(document.body).getPropertyValue("--border-strong").trim() || "#d4cdc3";
+
+      for (let i = 0; i < bufferLength; i++) {
+        const barHeight = Math.max(3, (dataArray[i] / 255) * (height - 6));
+        ctx.fillStyle = dataArray[i] > 20 ? accentColor : mutedColor;
+        ctx.fillRect(x, height - barHeight, barWidth, barHeight);
+        x += barWidth + barGap;
+      }
+
+      animFrameId = requestAnimationFrame(drawSpectrogram);
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. Background Playback Session & Media Session API (Mobile / Lock Screen)
+    // -------------------------------------------------------------------------
+    let silentKeepAlive = null;
+    let wakeLock = null;
+
+    function ensureBackgroundKeepAlive() {
+      if (!silentKeepAlive) {
+        silentKeepAlive = new Audio();
+        silentKeepAlive.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+        silentKeepAlive.loop = true;
+        silentKeepAlive.volume = 0.001;
+      }
+      silentKeepAlive.play().catch(() => {});
+    }
+
+    // Unthrottled Web Worker Timer for background tabs & mobile screen lock
+    const workerTimer = (() => {
+      try {
+        const workerBlob = new Blob([`
+          self.onmessage = function(e) {
+            setTimeout(function() {
+              self.postMessage(e.data);
+            }, e.data.delay);
+          };
+        `], { type: "application/javascript" });
+        const worker = new Worker(URL.createObjectURL(workerBlob));
+        const callbacks = new Map();
+        let idCounter = 0;
+        worker.onmessage = function(e) {
+          const cb = callbacks.get(e.data.id);
+          if (cb) {
+            callbacks.delete(e.data.id);
+            cb();
+          }
+        };
+        return {
+          setTimeout: (cb, delay) => {
+            const id = ++idCounter;
+            callbacks.set(id, cb);
+            worker.postMessage({ id, delay });
+            return id;
+          }
+        };
+      } catch (e) {
+        return {
+          setTimeout: (cb, delay) => setTimeout(cb, delay)
+        };
+      }
+    })();
+
+    async function requestWakeLock() {
+      if ("wakeLock" in navigator && !wakeLock) {
+        try {
+          wakeLock = await navigator.wakeLock.request("screen");
+        } catch (e) {}
+      }
+    }
+
+    function releaseWakeLock() {
+      if (wakeLock) {
+        wakeLock.release().catch(() => {});
+        wakeLock = null;
+      }
+    }
+
+    function updateMediaSession() {
+      if (!("mediaSession" in navigator)) return;
+      const title = state.article ? state.article.title : "they.audio Podcast";
+      const curItem = state.sentences[state.currentIndex];
+      const snippet = curItem ? curItem.display_text : "they.audio Stream";
+
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: title,
+        artist: state.voice.includes("Andrew") ? "Andrew (Podcast Host)" : "they.audio Neural Studio",
+        album: "they.audio Monograph Stream",
+      });
+      navigator.mediaSession.playbackState = state.status === AppState.PLAYING ? "playing" : "paused";
+    }
+
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.setActionHandler("play", () => resumePlayback());
+      navigator.mediaSession.setActionHandler("pause", () => pausePlayback());
+      navigator.mediaSession.setActionHandler("previoustrack", () => {
+        if (state.currentIndex > 0) playSentence(state.currentIndex - 1, true);
+      });
+      navigator.mediaSession.setActionHandler("nexttrack", () => {
+        if (state.currentIndex < state.sentences.length - 1) playSentence(state.currentIndex + 1, true);
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. Audio Synthesis & Lookahead Prefetch
+    // -------------------------------------------------------------------------
+    function makeAudioUrl(text, voice, rate) {
+      const q = new URLSearchParams({ text: text, voice: voice, rate: rate });
+      return `/api/tts?${q.toString()}`;
+    }
+
+    async function prefetchSentence(index) {
+      if (index < 0 || index >= state.sentences.length) return;
+      const item = state.sentences[index];
+      const text = (item.speech_text || item.display_text || "").trim();
+      if (!text) return;
+
+      const key = `${state.voice}|${state.rate}|${index}|${text}`;
+      if (audioBlobCache.has(key) || inflightPrefetches.has(key)) return;
+
+      const url = makeAudioUrl(text, state.voice, state.rate);
+      const promise = fetch(url)
+        .then(res => res.blob())
+        .then(blob => {
+          const objectUrl = URL.createObjectURL(blob);
+          audioBlobCache.set(key, objectUrl);
+          inflightPrefetches.delete(key);
+          updateBufferTelemetry();
+        })
+        .catch(() => inflightPrefetches.delete(key));
+
+      inflightPrefetches.set(key, promise);
+      updateBufferTelemetry();
+    }
+
+    function updateBufferTelemetry() {
+      if (!lookaheadBufferText) return;
+      let count = 0;
+      if (state.currentIndex + 1 < state.sentences.length) count++;
+      if (state.currentIndex + 2 < state.sentences.length) count++;
+      lookaheadBufferText.textContent = `Buffer: +${count} Lookahead`;
+    }
+
+    async function getOrFetchSentenceAudio(index) {
+      const item = state.sentences[index];
+      const text = (item.speech_text || item.display_text || "").trim();
+      const key = `${state.voice}|${state.rate}|${index}|${text}`;
+
+      if (audioBlobCache.has(key)) return audioBlobCache.get(key);
+      if (inflightPrefetches.has(key)) {
+        await inflightPrefetches.get(key);
+        if (audioBlobCache.has(key)) return audioBlobCache.get(key);
+      }
+
+      const res = await fetch(makeAudioUrl(text, state.voice, state.rate));
+      if (!res.ok) throw new Error("Synthesis failed");
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      audioBlobCache.set(key, objectUrl);
+      return objectUrl;
+    }
+
+    async function playSentence(index, userTriggered = false) {
+      if (!state.sentences || index < 0 || index >= state.sentences.length) return;
+
+      const currentGen = ++state.generation;
+      state.currentIndex = index;
+      state.status = AppState.BUFFERING;
+      updateUI();
+
+      prefetchSentence(index + 1);
+      prefetchSentence(index + 2);
+
+      try {
+        const audioSrc = await getOrFetchSentenceAudio(index);
+        if (currentGen !== state.generation) return;
+
+        initWebAudio();
+        if (audioCtx && audioCtx.state === "suspended") {
+          await audioCtx.resume();
+        }
+
+        ensureBackgroundKeepAlive();
+        requestWakeLock();
+
+        audioPlayer.src = audioSrc;
+        const playPromise = audioPlayer.play();
+
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              if (currentGen === state.generation) {
+                state.status = AppState.PLAYING;
+                updateUI();
+                updateMediaSession();
+                saveProgress();
+                gestureNotice.style.display = "none";
+              }
+            })
+            .catch(err => {
+              if (err.name === "NotAllowedError") {
+                state.status = AppState.READY;
+                updateUI();
+                gestureNotice.style.display = "flex";
+              } else {
+                state.status = AppState.ERROR;
+                updateUI();
+              }
+            });
+        }
+      } catch (err) {
+        if (currentGen === state.generation) {
+          state.status = AppState.ERROR;
+          updateUI();
+        }
+      }
+    }
+
+    // Handlers for Audio Ending & Podcast Cadence Pauses
+    audioPlayer.addEventListener("ended", () => {
+      const curItem = state.sentences[state.currentIndex];
+      // Deliberate pause from cadence engine (defaults to 250ms)
+      const pauseDuration = (curItem && curItem.pause_after_ms) ? curItem.pause_after_ms : 250;
+
+      if (state.currentIndex + 1 < state.sentences.length) {
+        state.status = AppState.BUFFERING;
+        updateUI();
+        // Ambient sound keeps playing continuously through this silence!
+        // Unthrottled worker timer ensures background & lock screen playback never stalls
+        workerTimer.setTimeout(() => {
+          playSentence(state.currentIndex + 1);
+        }, pauseDuration);
+      } else {
+        state.status = AppState.READY;
+        state.currentIndex = 0;
+        updateUI();
+        updateMediaSession();
+        releaseWakeLock();
+      }
+    });
+
+    function pausePlayback() {
+      audioPlayer.pause();
+      if (silentKeepAlive) {
+        try { silentKeepAlive.pause(); } catch(e) {}
+      }
+      state.status = AppState.PAUSED;
+      updateUI();
+      updateMediaSession();
+      releaseWakeLock();
+    }
+
+    function resumePlayback() {
+      ensureBackgroundKeepAlive();
+      if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+      if (state.ambient !== "none" && ambientEngine.currentSound === "none") {
+        ambientEngine.play(state.ambient);
+      }
+      if (state.status === AppState.PAUSED && audioPlayer.src) {
+        audioPlayer.play().then(() => {
+          state.status = AppState.PLAYING;
+          updateUI();
+          updateMediaSession();
+          requestWakeLock();
+        }).catch(() => playSentence(state.currentIndex, true));
+      } else {
+        playSentence(state.currentIndex, true);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 6. Extraction & Rendering Pipeline
+    // -------------------------------------------------------------------------
+    async function loadAndExtractUrl(url, resumeIndex = 0, autoPlay = true) {
+      if (!url) return;
+      state.status = AppState.EXTRACTING;
+      updateUI();
+      audioPlayer.pause();
+      audioBlobCache.clear();
+      inflightPrefetches.clear();
+
+      try {
+        const res = await fetch("/api/extract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: url }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.detail || `Extraction failed (${res.status})`);
+        }
+
+        const data = await res.json();
+        state.article = data;
+        state.sentences = data.sentences || [];
+        state.currentIndex = Math.min(resumeIndex, Math.max(0, state.sentences.length - 1));
+
+        renderArticle(data);
+        state.status = AppState.READY;
+        updateUI();
+
+        document.querySelectorAll(".monograph-item").forEach(pill => {
+          pill.classList.toggle("active", pill.dataset.url === url);
+        });
+
+        if (autoPlay && state.sentences.length > 0) {
+          playSentence(state.currentIndex, false);
+        }
+      } catch (err) {
+        state.status = AppState.ERROR;
+        updateUI();
+        showToast(err.message || "Failed to load monograph");
+      }
+    }
+
+    function renderArticle(article) {
+      articleHeader.style.display = "block";
+      articleHeadline.textContent = article.title || "Untitled Monograph";
+      articleByline.textContent = article.byline || article.author || "Archival Monograph";
+
+      try {
+        const host = new URL(article.url).hostname.replace(/^www\./, "").toUpperCase();
+        articleDomainBadge.textContent = host;
+      } catch (e) {
+        articleDomainBadge.textContent = article.extractor_used?.toUpperCase() || "DOCUMENT";
+      }
+
+      const isPodcast = article.extractor_used?.includes("podcast");
+      articleCadenceBadge.style.display = isPodcast ? "inline-block" : "none";
+
+      const total = article.sentences.length;
+      articleSentenceBadge.textContent = `${total} SENTENCES`;
+      const estMinutes = Math.max(1, Math.round(total / 12));
+      articleTimeBadge.textContent = `~${estMinutes} MIN AUDIO`;
+
+      dockArticleTitle.textContent = article.title || "Monograph";
+
+      proseContainer.innerHTML = "";
+      let currentParagraphEl = document.createElement("p");
+      currentParagraphEl.className = "prose-paragraph font-serif";
+
+      article.sentences.forEach(s => {
+        if (s.kind === "code_spoken_cue" || s.kind === "table_spoken_cue") {
+          if (currentParagraphEl.hasChildNodes()) {
+            proseContainer.appendChild(currentParagraphEl);
+            currentParagraphEl = document.createElement("p");
+            currentParagraphEl.className = "prose-paragraph font-serif";
+          }
+          const cueDiv = document.createElement("div");
+          cueDiv.className = "spoken-cue-card";
+          cueDiv.textContent = s.display_text;
+          cueDiv.dataset.sentenceIdx = s.idx;
+          cueDiv.addEventListener("click", () => playSentence(s.idx, true));
+          proseContainer.appendChild(cueDiv);
+          return;
+        }
+
+        const span = document.createElement("span");
+        span.className = "sentence-span";
+        span.textContent = s.display_text + " ";
+        span.dataset.sentenceIdx = s.idx;
+        if (s.mood) span.dataset.mood = s.mood;
+        span.tabIndex = 0;
+        span.setAttribute("role", "button");
+        span.setAttribute("aria-label", `Play sentence ${s.idx + 1}`);
+
+        span.addEventListener("click", () => playSentence(s.idx, true));
+        span.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            playSentence(s.idx, true);
+          }
+        });
+
+        currentParagraphEl.appendChild(span);
+      });
+
+      if (currentParagraphEl.hasChildNodes()) {
+        proseContainer.appendChild(currentParagraphEl);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 7. Reactive UI Sync Loop
+    // -------------------------------------------------------------------------
+    function updateUI() {
+      const hasSentences = state.sentences.length > 0;
+      const isPlaying = state.status === AppState.PLAYING;
+      const isBuffering = state.status === AppState.BUFFERING;
+      const isExtracting = state.status === AppState.EXTRACTING;
+
+      extractBtn.disabled = isExtracting;
+      extractBtn.innerHTML = isExtracting
+        ? `<svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg> EXTRACTING...`
+        : `<svg class="icon-svg" viewBox="0 0 24 24" style="stroke-width:2.5;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> NARRATE PROSE ↵`;
+
+      playPauseBtn.disabled = !hasSentences || isExtracting;
+      prevBtn.disabled = !hasSentences || state.currentIndex <= 0;
+      nextBtn.disabled = !hasSentences || state.currentIndex >= state.sentences.length - 1;
+
+      if (isPlaying) {
+        playIconSvg.style.display = "none";
+        pauseIconSvg.style.display = "inline-block";
+        statusDot.className = "status-dot";
+        statusText.textContent = "Streaming 24kHz";
+      } else if (isBuffering || isExtracting) {
+        playIconSvg.style.display = "inline-block";
+        pauseIconSvg.style.display = "none";
+        statusDot.className = "status-dot busy";
+        statusText.textContent = isBuffering ? "Buffering..." : "Extracting...";
+      } else {
+        playIconSvg.style.display = "inline-block";
+        pauseIconSvg.style.display = "none";
+        statusDot.className = "status-dot";
+        statusText.textContent = "24kHz PCM";
+      }
+
+      if (hasSentences) {
+        const pct = ((state.currentIndex + 1) / state.sentences.length) * 100;
+        scrubberFill.style.width = `${pct}%`;
+        scrubberTrack.setAttribute("aria-valuenow", Math.round(pct));
+        scrubberTime.textContent = `${state.currentIndex + 1} / ${state.sentences.length}`;
+
+        const curItem = state.sentences[state.currentIndex];
+        dockSentenceSnippet.textContent = curItem ? curItem.display_text : "";
+      } else {
+        scrubberFill.style.width = "0%";
+        scrubberTime.textContent = "0 / 0";
+        dockSentenceSnippet.textContent = "Select or paste a link to begin listening";
+      }
+
+      document.querySelectorAll(".sentence-span, .spoken-cue-card").forEach((el) => {
+        const idx = parseInt(el.dataset.sentenceIdx, 10);
+        const isActive = idx === state.currentIndex;
+        el.classList.toggle("active-sentence", isActive);
+
+        const parentPara = el.closest(".prose-paragraph");
+        if (parentPara) parentPara.classList.toggle("contains-active", isActive);
+
+        if (isActive && state.autoScroll && (isPlaying || isBuffering)) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      });
+    }
+
+    async function saveProgress() {
+      if (!state.article || !state.article.url || !state.sentences || !state.sentences.length) return;
+      try {
+        await fetch("/api/progress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: state.article.url,
+            current_sentence_idx: state.currentIndex,
+            total_sentences: state.sentences.length,
+          }),
+        });
+      } catch (e) {}
+    }
+
+    // -------------------------------------------------------------------------
+    // 8. Event Handlers & Document Ingestion
+    // -------------------------------------------------------------------------
+    extractForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const url = urlInput.value.trim();
+      if (url) loadAndExtractUrl(url, 0, true);
+    });
+
+    pasteClipboardBtn.addEventListener("click", async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text && text.startsWith("http")) {
+          urlInput.value = text;
+          loadAndExtractUrl(text, 0, true);
+        } else if (text && text.length > 20) {
+          // Open Upload/Paste modal with pasted content prefilled!
+          document.getElementById("uploadDocBtn").click();
+          document.getElementById("tabPasteTextBtn").click();
+          document.getElementById("pasteContentArea").value = text;
+          showToast("Pasted clipboard text into Podcast Script dialog");
+        } else {
+          showToast("Clipboard does not contain a URL or text document");
+        }
+      } catch (err) {
+        showToast("Please paste manually into the input");
+      }
+    });
+
+    playPauseBtn.addEventListener("click", () => {
+      if (state.status === AppState.PLAYING) {
+        pausePlayback();
+      } else {
+        resumePlayback();
+      }
+    });
+
+    prevBtn.addEventListener("click", () => {
+      if (state.currentIndex > 0) playSentence(state.currentIndex - 1, true);
+    });
+
+    nextBtn.addEventListener("click", () => {
+      if (state.currentIndex < state.sentences.length - 1) playSentence(state.currentIndex + 1, true);
+    });
+
+    scrubberTrack.addEventListener("click", (e) => {
+      if (!state.sentences || state.sentences.length === 0) return;
+      const rect = scrubberTrack.getBoundingClientRect();
+      const clickRatio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const targetIndex = Math.min(
+        state.sentences.length - 1,
+        Math.floor(clickRatio * state.sentences.length)
+      );
+      playSentence(targetIndex, true);
+    });
+
+    document.querySelectorAll(".sample-pill").forEach(pill => {
+      pill.addEventListener("click", () => {
+        const url = pill.dataset.url;
+        if (url) {
+          urlInput.value = url;
+          loadAndExtractUrl(url, 0, true);
+        }
+      });
+    });
+
+    // Neural Voice & Speed
+    voiceSelect.addEventListener("change", () => {
+      state.voice = voiceSelect.value;
+      audioBlobCache.clear();
+      if (state.status === AppState.PLAYING) playSentence(state.currentIndex, true);
+    });
+
+    rateSelect.addEventListener("change", () => {
+      state.rate = rateSelect.value;
+      audioBlobCache.clear();
+      if (state.status === AppState.PLAYING) playSentence(state.currentIndex, true);
+    });
+
+    // Ambient White Noise Controls
+    ambientSelect.addEventListener("change", () => {
+      state.ambient = ambientSelect.value;
+      initWebAudio();
+      if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+      ambientEngine.play(state.ambient);
+      showToast(state.ambient === "none" ? "Ambient bed muted" : `Ambient bed: ${ambientSelect.options[ambientSelect.selectedIndex].text}`);
+    });
+
+    ambientVolumeSlider.addEventListener("input", () => {
+      const vol = parseInt(ambientVolumeSlider.value, 10) / 100;
+      state.ambientVolume = vol;
+      ambientVolumeVal.textContent = `${ambientVolumeSlider.value}%`;
+      ambientEngine.setVolume(vol);
+    });
+
+    focusModeToggle.addEventListener("change", () => {
+      state.focusMode = focusModeToggle.checked;
+      document.body.classList.toggle("is-focus-mode", state.focusMode);
+    });
+
+    autoScrollToggle.addEventListener("change", () => {
+      state.autoScroll = autoScrollToggle.checked;
+    });
+
+    fontIncBtn.addEventListener("click", () => {
+      let cur = parseInt(getComputedStyle(document.body).getPropertyValue("--font-size-reader"), 10) || 20;
+      if (cur < 28) {
+        cur += 2;
+        document.documentElement.style.setProperty("--font-size-reader", `${cur}px`);
+      }
+    });
+    fontDecBtn.addEventListener("click", () => {
+      let cur = parseInt(getComputedStyle(document.body).getPropertyValue("--font-size-reader"), 10) || 20;
+      if (cur > 16) {
+        cur -= 2;
+        document.documentElement.style.setProperty("--font-size-reader", `${cur}px`);
+      }
+    });
+
+    document.querySelectorAll(".theme-pill").forEach(pill => {
+      pill.addEventListener("click", () => {
+        document.querySelectorAll(".theme-pill").forEach(p => p.classList.remove("active"));
+        pill.classList.add("active");
+        document.body.className = `font-serif theme-${pill.dataset.theme}`;
+        if (state.focusMode) document.body.classList.add("is-focus-mode");
+      });
+    });
+
+    gestureStartBtn.addEventListener("click", () => {
+      gestureNotice.style.display = "none";
+      playSentence(state.currentIndex, true);
+    });
+
+    // Keyboard Shortcuts
+    window.addEventListener("keydown", (e) => {
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
+      if (e.key === " " || e.code === "Space") {
+        e.preventDefault();
+        if (state.status === AppState.PLAYING) pausePlayback();
+        else resumePlayback();
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        if (state.currentIndex > 0) playSentence(state.currentIndex - 1, true);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        if (state.currentIndex < state.sentences.length - 1) playSentence(state.currentIndex + 1, true);
+      } else if (e.key === "f" || e.key === "F") {
+        focusModeToggle.checked = !focusModeToggle.checked;
+        focusModeToggle.dispatchEvent(new Event("change"));
+      } else if (e.key >= "1" && e.key <= "4") {
+        const pills = document.querySelectorAll(".monograph-item");
+        const idx = parseInt(e.key, 10) - 1;
+        if (pills[idx]) pills[idx].click();
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // 9. Document Upload & Script Ingestion Modal
+    // -------------------------------------------------------------------------
+    const uploadModal = document.getElementById("uploadModal");
+    const uploadDocBtn = document.getElementById("uploadDocBtn");
+    const emptyUploadBtn = document.getElementById("emptyUploadBtn");
+    const tabUploadFileBtn = document.getElementById("tabUploadFileBtn");
+    const tabPasteTextBtn = document.getElementById("tabPasteTextBtn");
+    const paneUploadFile = document.getElementById("paneUploadFile");
+    const panePasteText = document.getElementById("panePasteText");
+    const fileInput = document.getElementById("fileInput");
+    const browseFileBtn = document.getElementById("browseFileBtn");
+    const dropzone = document.getElementById("dropzone");
+    const selectedFileInfo = document.getElementById("selectedFileInfo");
+    const selectedFileName = document.getElementById("selectedFileName");
+    const selectedFileSize = document.getElementById("selectedFileSize");
+    const submitUploadBtn = document.getElementById("submitUploadBtn");
+    const pasteContentArea = document.getElementById("pasteContentArea");
+    const pasteTitleInput = document.getElementById("pasteTitleInput");
+    const podcastModeToggle = document.getElementById("podcastModeToggle");
+
+    let currentUploadMode = "file";
+    let chosenFile = null;
+
+    function openUploadModal() {
+      uploadModal.classList.add("active");
+    }
+
+    uploadDocBtn.addEventListener("click", openUploadModal);
+    if (emptyUploadBtn) emptyUploadBtn.addEventListener("click", openUploadModal);
+
+    tabUploadFileBtn.addEventListener("click", () => {
+      currentUploadMode = "file";
+      tabUploadFileBtn.style.borderBottom = "2px solid var(--accent)";
+      tabUploadFileBtn.style.fontWeight = "700";
+      tabPasteTextBtn.style.borderBottom = "none";
+      tabPasteTextBtn.style.fontWeight = "600";
+      paneUploadFile.style.display = "block";
+      panePasteText.style.display = "none";
+    });
+
+    tabPasteTextBtn.addEventListener("click", () => {
+      currentUploadMode = "paste";
+      tabPasteTextBtn.style.borderBottom = "2px solid var(--accent)";
+      tabPasteTextBtn.style.fontWeight = "700";
+      tabUploadFileBtn.style.borderBottom = "none";
+      tabUploadFileBtn.style.fontWeight = "600";
+      paneUploadFile.style.display = "none";
+      panePasteText.style.display = "block";
+    });
+
+    browseFileBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      fileInput.click();
+    });
+    dropzone.addEventListener("click", () => fileInput.click());
+
+    dropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = "var(--accent)";
+    });
+    dropzone.addEventListener("dragleave", () => {
+      dropzone.style.borderColor = "var(--border-strong)";
+    });
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = "var(--border-strong)";
+      if (e.dataTransfer.files.length > 0) {
+        handleFileSelection(e.dataTransfer.files[0]);
+      }
+    });
+
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files.length > 0) {
+        handleFileSelection(fileInput.files[0]);
+      }
+    });
+
+    function handleFileSelection(file) {
+      chosenFile = file;
+      selectedFileName.textContent = file.name;
+      selectedFileSize.textContent = `${Math.round(file.size / 1024)} KB`;
+      selectedFileInfo.style.display = "flex";
+      showToast(`Selected: ${file.name}`);
+    }
+
+    // Intercept clipboard paste (Cmd+V / Ctrl+V) of screenshots
+    window.addEventListener("paste", (e) => {
+      const items = e.clipboardData ? e.clipboardData.items : [];
+      let imageFile = null;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type && items[i].type.startsWith("image/")) {
+          imageFile = items[i].getAsFile();
+          break;
+        }
+      }
+      if (imageFile) {
+        uploadModal.classList.add("active");
+        fileModeBtn.click();
+        handleFileSelection(imageFile);
+        showToast("Screenshot captured from clipboard! Ready to podcast.");
+      }
+    });
+
+    submitUploadBtn.addEventListener("click", async () => {
+      const isPodcast = podcastModeToggle.checked;
+      submitUploadBtn.disabled = true;
+      submitUploadBtn.textContent = "Processing Podcast Prose...";
+
+      try {
+        if (currentUploadMode === "file") {
+          if (!chosenFile) {
+            showToast("Please choose a document or screenshot first.");
+            submitUploadBtn.disabled = false;
+            submitUploadBtn.textContent = "Generate & Play Podcast ↵";
+            return;
+          }
+
+          // Check if file is image (screenshot)
+          const ext = chosenFile.name.split(".").pop().toLowerCase();
+          if (["png", "jpg", "jpeg", "webp", "bmp", "tiff"].includes(ext)) {
+            submitUploadBtn.textContent = "Scanning screenshot via OCR...";
+            showToast("Neural OCR active: scanning text in screenshot...");
+            if (window.Tesseract) {
+              const resOcr = await Tesseract.recognize(chosenFile, "eng", {
+                logger: m => {
+                  if (m.status === "recognizing text" && m.progress) {
+                    submitUploadBtn.textContent = `OCR Scanning: ${Math.round(m.progress * 100)}%`;
+                  }
+                }
+              });
+              const ocrText = (resOcr && resOcr.data && resOcr.data.text) ? resOcr.data.text.trim() : "";
+              if (!ocrText || ocrText.length < 5) {
+                throw new Error("No readable text recognized in this screenshot. Please try a higher-contrast image or paste the text directly.");
+              }
+              const res = await fetch("/api/extract/text", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  text: ocrText,
+                  title: chosenFile.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " "),
+                  podcast_mode: isPodcast,
+                }),
+              });
+              if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || "Podcast conversion failed");
+              }
+              const data = await res.json();
+              handleExtractedDocumentSuccess(data);
+              return;
+            }
+          }
+
+          const formData = new FormData();
+          formData.append("file", chosenFile);
+          formData.append("podcast_mode", isPodcast ? "true" : "false");
+
+          const res = await fetch("/api/extract/file", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || "Document extraction failed");
+          }
+
+          const data = await res.json();
+          handleExtractedDocumentSuccess(data);
+
+        } else {
+          // Paste mode
+          const text = pasteContentArea.value.trim();
+          if (!text || text.length < 5) {
+            showToast("Please paste at least one sentence of text.");
+            submitUploadBtn.disabled = false;
+            submitUploadBtn.textContent = "Generate & Play Podcast ↵";
+            return;
+          }
+
+          const res = await fetch("/api/extract/text", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              text: text,
+              title: pasteTitleInput.value.trim() || "Pasted Script",
+              podcast_mode: isPodcast,
+            }),
+          });
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || "Script processing failed");
+          }
+
+          const data = await res.json();
+          handleExtractedDocumentSuccess(data);
+        }
+      } catch (err) {
+        showToast(err.message || "Extraction error");
+      } finally {
+        submitUploadBtn.disabled = false;
+        submitUploadBtn.textContent = "Generate & Play Podcast ↵";
+      }
+    });
+
+    function handleExtractedDocumentSuccess(data) {
+      uploadModal.classList.remove("active");
+      state.article = data;
+      state.sentences = data.sentences || [];
+      state.currentIndex = 0;
+      renderArticle(data);
+      state.status = AppState.READY;
+      updateUI();
+      urlInput.value = data.url;
+      showToast(`Loaded ${state.sentences.length} podcast sentences`);
+      playSentence(0, true);
+    }
+
+    // -------------------------------------------------------------------------
+    // 10. Modals: Library, Bookmarklet, Feedback
+    // -------------------------------------------------------------------------
+    const libraryModal = document.getElementById("libraryModal");
+    const bookmarkletModal = document.getElementById("bookmarkletModal");
+    const feedbackModal = document.getElementById("feedbackModal");
+    const bookmarkletCode = document.getElementById("bookmarkletCode");
+
+    bookmarkletCode.value = `javascript:(function(){window.open('${window.location.origin}/?url='+encodeURIComponent(location.href));})();`;
+
+    document.getElementById("libraryBtn").addEventListener("click", async () => {
+      libraryModal.classList.add("active");
+      const listEl = document.getElementById("libraryList");
+      try {
+        const res = await fetch("/api/history");
+        const data = await res.json();
+        if (data.history && data.history.length > 0) {
+          listEl.innerHTML = data.history.map(item => {
+            const pos = item.last_index ?? item.current_sentence_idx ?? 0;
+            const tot = item.total_sentences ? ` / ${item.total_sentences}` : "";
+            return `
+            <div style="padding:8px 0; border-bottom:1px solid var(--border-rule); display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <a href="#" class="history-item-link" data-url="${item.url}" style="font-family:var(--font-ui); font-size:0.85rem; font-weight:600; color:var(--text-primary); text-decoration:none;">${item.title || item.url}</a>
+                <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-muted);">${(item.sitename || "MONOGRAPH").toUpperCase()} · Position: ${pos}${tot}</div>
+              </div>
+              <button class="btn-action history-play-btn" data-url="${item.url}" data-idx="${pos}" style="height:28px; font-size:10px;">Load</button>
+            </div>
+          `;}).join("");
+
+          listEl.querySelectorAll(".history-play-btn, .history-item-link").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+              e.preventDefault();
+              libraryModal.classList.remove("active");
+              urlInput.value = btn.dataset.url;
+              loadAndExtractUrl(btn.dataset.url, parseInt(btn.dataset.idx || 0, 10), true);
+            });
+          });
+        } else {
+          listEl.innerHTML = `<p style="color:var(--text-muted); font-size:0.85rem; font-family:var(--font-mono);">No history recorded yet.</p>`;
+        }
+      } catch (err) {
+        listEl.innerHTML = `<p style="color:var(--text-muted); font-size:0.85rem; font-family:var(--font-mono);">Failed to load library.</p>`;
+      }
+    });
+
+    document.getElementById("bookmarkletBtn").addEventListener("click", () => {
+      bookmarkletModal.classList.add("active");
+    });
+    document.getElementById("copyBookmarkletBtn").addEventListener("click", () => {
+      bookmarkletCode.select();
+      navigator.clipboard.writeText(bookmarkletCode.value);
+      showToast("Bookmarklet copied to clipboard");
+    });
+
+    document.getElementById("feedbackBtn").addEventListener("click", () => {
+      feedbackModal.classList.add("active");
+    });
+
+    document.querySelectorAll(".close-modal").forEach(btn => {
+      btn.addEventListener("click", () => {
+        uploadModal.classList.remove("active");
+        libraryModal.classList.remove("active");
+        bookmarkletModal.classList.remove("active");
+        feedbackModal.classList.remove("active");
+      });
+    });
+
+    let userRating = 5;
+    const starCluster = document.getElementById("starCluster");
+    starCluster.querySelectorAll(".star-item").forEach(star => {
+      star.addEventListener("click", () => {
+        userRating = parseInt(star.dataset.rating, 10);
+        starCluster.querySelectorAll(".star-item").forEach(s => {
+          const r = parseInt(s.dataset.rating, 10);
+          s.classList.toggle("active", r <= userRating);
+          s.style.opacity = r <= userRating ? "1" : "0.3";
+        });
+      });
+    });
+
+    document.getElementById("submitFeedbackBtn").addEventListener("click", async () => {
+      const comment = document.getElementById("feedbackComment").value;
+      const articleUrl = state.article ? state.article.url : "https://they.audio";
+      try {
+        await fetch("/api/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            article_url: articleUrl,
+            rating: userRating,
+            comment: comment,
+          }),
+        });
+        feedbackModal.classList.remove("active");
+        showToast("Thank you for the acoustic telemetry feedback");
+      } catch (err) {
+        showToast("Feedback submission failed");
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // 11. Startup Lifecycle
+    // -------------------------------------------------------------------------
+    window.addEventListener("DOMContentLoaded", () => {
+      const params = new URLSearchParams(window.location.search);
+      const targetUrl = params.get("url") || "https://departmentofproduct.substack.com/p/product-taste-in-practice";
+      urlInput.value = targetUrl;
+      loadAndExtractUrl(targetUrl, 0, false);
+    });
+  </script>
+</body>
+</html>
