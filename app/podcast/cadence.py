@@ -55,8 +55,12 @@ ENUMERATION_REGEX = re.compile("|".join(ENUMERATION_TRIGGERS), re.IGNORECASE)
 
 
 def sanitize_for_podcast(text: str) -> str:
-    """Cleans citation brackets, raw URLs, and stiff artifacts unsuitable for podcast speech."""
+    """Cleans citation brackets, raw URLs, markdown syntax, and stiff artifacts unsuitable for podcast speech."""
     s = text.strip()
+    # Strip markdown images ![alt](url)
+    s = re.sub(r"!\[[^\]]*\]\([^\)]+\)", " ", s)
+    # Convert markdown links [Text](url) -> Text
+    s = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", s)
     # Remove citations like [1], [12], [citation needed]
     s = re.sub(r"\[\d+\]", "", s)
     s = re.sub(r"\[(?:citation needed|note)\]", "", s, flags=re.IGNORECASE)
@@ -64,6 +68,11 @@ def sanitize_for_podcast(text: str) -> str:
     s = re.sub(r"https?://\S+", "link", s)
     # Remove figure/table references like (Figure 1), (see Table 2)
     s = re.sub(r"\((?:see\s+)?(?:Figure|Fig\.|Table)\s*\d+[a-z]?\)", "", s, flags=re.IGNORECASE)
+    # Strip markdown table separator rows and stray pipes
+    s = re.sub(r"^\s*\|[\s\-:|]+\|\s*$", "", s)
+    s = re.sub(r"(?:\|\s*)+", " ", s)
+    # Strip markdown bold/italic asterisks
+    s = re.sub(r"\*{1,3}", "", s)
     # Clean redundant whitespace
     s = re.sub(r"\s+", " ", s).strip()
     return s

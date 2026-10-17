@@ -2,7 +2,7 @@
 
 Designed specifically for learners who struggle with attention drift or dense text.
 Instead of verbatim ping-pong reading or cheesy AI podcast banter, this engine pairs:
-- Speaker A (Anchor): Presents the core thesis, mechanisms, and evidence clearly.
+- Speaker A (Anchor): Presents the core thesis, mechanisms, and primary evidence clearly.
 - Speaker B (Focus Partner): Interrupts cognitive overload, asks grounding questions,
   highlights pivots, and distills dense clauses into concrete mental models.
 """
@@ -54,54 +54,100 @@ REVELATION_START_REGEX = re.compile(
     re.IGNORECASE,
 )
 
+LEADING_DATELINE_REGEX = re.compile(
+    r"^(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\s+(?=[A-Z\"“])"
+)
+
 
 def strip_cheesy_banter(text: str) -> str:
     """Removes banned cheesy AI podcast filler while preserving substantive prose."""
     cleaned = CHEESY_BANTER_REGEX.sub("", text)
+    cleaned = LEADING_DATELINE_REGEX.sub("", cleaned)
     cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
     return cleaned
 
 
-def _extract_focus_concept(sentence: str) -> str:
-    """Extracts a concise 2-5 word subject phrase from a sentence for grounded focus prompts."""
-    cleaned = re.sub(
-        r"^(?:However|Yet|In fact|Crucially|Fundamentally|First|Second|Third|Finally|Therefore|Thus|So),?\s*",
-        "",
-        sentence.strip(),
-        flags=re.IGNORECASE,
-    )
-    # Take words before the first major verb or punctuation
-    clause = re.split(r"[,:;—–]|(?:\b(?:is|are|was|were|requires|causes|means|explains|creates|forces|allows)\b)", cleaned, maxsplit=1)[0]
-    words = [w.strip("\"'()[]") for w in clause.split() if w.strip("\"'()[]")]
-    if 2 <= len(words) <= 6:
-        return " ".join(words).lower()
-    if len(words) > 6:
-        return " ".join(words[:4]).lower()
-    return "this mechanism"
+def _distill_dense_sentence(sentence: str) -> Tuple[str, str, str]:
+    """Splits an overloaded multi-clause sentence into (setup_clause, bridge_prompt, takeaway_clause)
 
-
-def _distill_dense_sentence(sentence: str) -> Tuple[str, str]:
-    """Splits an overloaded multi-clause sentence into (setup_clause, core_takeaway)
-
-    so working memory isn't overwhelmed.
+    so working memory isn't overwhelmed and both voices collaborate on the single idea.
+    Returns (sentence, "", "") if the sentence is already concise or cannot be cleanly split.
     """
-    if " — " in sentence:
-        parts = sentence.split(" — ", 1)
-        if len(parts[0].split()) >= 5 and len(parts[1].split()) >= 4:
-            return parts[0].strip() + ".", parts[1].strip()
-    if ": " in sentence and not sentence.lower().startswith("http"):
-        parts = sentence.split(": ", 1)
-        if len(parts[0].split()) >= 5 and len(parts[1].split()) >= 4:
-            return parts[0].strip() + ".", parts[1].strip()
-    if ", which " in sentence:
-        parts = sentence.split(", which ", 1)
-        if len(parts[0].split()) >= 6 and len(parts[1].split()) >= 4:
-            return parts[0].strip() + ".", "That directly " + parts[1].strip()
-    if " because " in sentence:
-        parts = sentence.split(" because ", 1)
-        if len(parts[0].split()) >= 6 and len(parts[1].split()) >= 4:
-            return parts[0].strip() + ".", "The reason is that " + parts[1].strip()
-    return sentence, ""
+    s = sentence.strip()
+
+    # 1. Em-dash or spaced hyphen pivot (" — " or " - ")
+    for sep in (" — ", " – ", " - "):
+        if sep in s:
+            parts = s.split(sep, 1)
+            left, right = parts[0].strip(), parts[1].strip()
+            if len(left.split()) >= 5 and len(right.split()) >= 4:
+                right_clean = re.sub(r"^(?:and|but|so)\s+", "", right, flags=re.IGNORECASE).strip()
+                if right_clean:
+                    right_clean = right_clean[0].lower() + right_clean[1:]
+                    return (
+                        left if left.endswith((".", "!", "?")) else left + ".",
+                        f"Wait — let's lock into that pivot: {right_clean}",
+                        "pivot",
+                    )
+
+    # 2. Colon explanation (": ")
+    if ": " in s and not s.lower().startswith("http"):
+        parts = s.split(": ", 1)
+        left, right = parts[0].strip(), parts[1].strip()
+        if len(left.split()) >= 5 and len(right.split()) >= 4:
+            right_clean = right[0].lower() + right[1:] if len(right) > 1 else right
+            return (
+                left + ".",
+                f"Put in plain terms: {right_clean}",
+                "unpack",
+            )
+
+    # 3. "because" causal mechanism
+    if " because " in s:
+        parts = s.split(" because ", 1)
+        left, right = parts[0].strip(), parts[1].strip()
+        if len(left.split()) >= 5 and len(right.split()) >= 4:
+            return (
+                left if left.endswith(".") else left + ".",
+                f"Hold on — why does that happen? Because {right}",
+                "mechanism",
+            )
+
+    # 4. ", which " relative consequence clause
+    if ", which " in s:
+        parts = s.split(", which ", 1)
+        left, right = parts[0].strip(), parts[1].strip()
+        if len(left.split()) >= 6 and len(right.split()) >= 4:
+            return (
+                left if left.endswith(".") else left + ".",
+                f"And notice what that directly does: it {right}",
+                "consequence",
+            )
+
+    # 5. " rather than " sharp contrast
+    if " rather than " in s:
+        parts = s.split(" rather than ", 1)
+        left, right = parts[0].strip(), parts[1].strip()
+        if len(left.split()) >= 7 and len(right.split()) >= 2:
+            return (
+                left if left.endswith(".") else left + ".",
+                f"Notice that distinction — not through {right}",
+                "contrast",
+            )
+
+    # 6. Semicolon compound thought ("; ")
+    if "; " in s:
+        parts = s.split("; ", 1)
+        left, right = parts[0].strip(), parts[1].strip()
+        if len(left.split()) >= 5 and len(right.split()) >= 4:
+            right_clean = right[0].lower() + right[1:] if len(right) > 1 else right
+            return (
+                left if left.endswith(".") else left + ".",
+                f"In other words, {right_clean}",
+                "unpack",
+            )
+
+    return s, "", ""
 
 
 def _build_turn(
@@ -267,6 +313,13 @@ def shape_article_into_dialogue(
                 current_idx += 1
         return dialogue_sentences
 
+    # Clean all paragraphs first and filter out empty/table-only noise
+    cleaned_paragraphs: List[str] = []
+    for raw_p in paragraphs:
+        cp = strip_cheesy_banter(sanitize_for_podcast(raw_p))
+        if cp and len(cp) > 2:
+            cleaned_paragraphs.append(cp)
+
     # 1. Opening Title by Anchor (Speaker A)
     dialogue_sentences.append(
         _build_turn(
@@ -277,39 +330,59 @@ def shape_article_into_dialogue(
             voice_b=voice_b,
             kind="title",
             is_title=True,
-            override_pause_ms=550,
+            override_pause_ms=500,
         )
     )
     current_idx += 1
 
-    # 2. Opening Focus Lock by Focus Partner (Speaker B) — sets cognitive intent without cheesy banter
-    title_concept = _extract_focus_concept(clean_title)
-    opening_focus = (
-        f"Let's lock in on the core idea right away — as we break down {title_concept}, "
-        "what is the main problem we are trying to solve?"
+    # Check if the very first sentence of the document is already a question
+    first_para_sents = (
+        [s.strip() for s in segmenter.segment(cleaned_paragraphs[0]) if s.strip()]
+        if cleaned_paragraphs
+        else []
     )
-    dialogue_sentences.append(
-        _build_turn(
-            current_idx,
-            opening_focus,
-            speaker="B",
-            voice_a=voice_a,
-            voice_b=voice_b,
-            kind="prose",
-            is_paragraph_end=True,
-            override_mood="question",
-            override_pause_ms=420,
+    first_sent_is_question = bool(first_para_sents and first_para_sents[0].endswith("?"))
+    first_sent_is_explicit_script = bool(
+        cleaned_paragraphs and SCRIPT_SPEAKER_REGEX.match(cleaned_paragraphs[0])
+    )
+
+    # 2. If document doesn't already open with a question or script prefix,
+    # Focus Partner (Speaker B) sets the cognitive focus frame immediately.
+    if not first_sent_is_question and not first_sent_is_explicit_script:
+        opening_focus = (
+            "Let's lock in on the core thesis right away — what is the main problem we are trying to solve here?"
         )
-    )
-    current_idx += 1
+        dialogue_sentences.append(
+            _build_turn(
+                current_idx,
+                opening_focus,
+                speaker="B",
+                voice_a=voice_a,
+                voice_b=voice_b,
+                kind="prose",
+                is_paragraph_end=True,
+                override_mood="question",
+                override_pause_ms=380,
+            )
+        )
+        current_idx += 1
 
     # 3. Process paragraphs with Cognitive Load Chunking & Role Differentiation
-    clarifier_cycle = 0
-    for p_idx, raw_para in enumerate(paragraphs):
-        para_clean = strip_cheesy_banter(sanitize_for_podcast(raw_para))
-        if not para_clean:
-            continue
+    bridge_cycle = 0
+    bridge_questions = [
+        "Hold on — how does that actually work in practice?",
+        "Wait — what is the core takeaway we should lock in from that?",
+        "Let's pause there for a second — why does that distinction matter?",
+        "Okay, so if that is the foundation, where does the argument go next?",
+    ]
+    takeaway_prefixes = [
+        "Here is the key takeaway to lock in: ",
+        "Put in plain terms: ",
+        "So the bottom line here is simple: ",
+        "Wait — pause on this point because it drives the rest: ",
+    ]
 
+    for p_idx, para_clean in enumerate(cleaned_paragraphs):
         # Check if the user pasted an explicit script turn (e.g. "Speaker B: ...")
         explicit_match = SCRIPT_SPEAKER_REGEX.match(para_clean)
         if explicit_match:
@@ -333,35 +406,67 @@ def shape_article_into_dialogue(
                 current_idx += 1
             continue
 
-        raw_sents = [s.strip() for s in segmenter.segment(para_clean) if s.strip()]
+        raw_sents = [
+            strip_cheesy_banter(s.strip())
+            for s in segmenter.segment(para_clean)
+            if strip_cheesy_banter(s.strip())
+        ]
         if not raw_sents:
             continue
+
+        speaker_b_used_in_para = False
+        consecutive_a_in_para = 0
 
         for s_idx, sent in enumerate(raw_sents):
             is_last_in_para = s_idx == len(raw_sents) - 1
             words = sent.split()
-            concept = _extract_focus_concept(sent)
+            last_speaker = dialogue_sentences[-1]["speaker"] if dialogue_sentences else "A"
 
-            # Case 1: Sentence starts with a sharp contrast ("However,", "Yet,", "Instead,")
-            # Focus Partner (B) flags the pivot first so the learner's brain catches the turn!
-            if CONTRAST_START_REGEX.search(sent):
-                core_claim = CONTRAST_START_REGEX.sub("", sent).strip()
-                if core_claim:
-                    core_claim = core_claim[0].upper() + core_claim[1:]
-                pivot_prompt = f"Hold on — here is the twist. Why does {concept} shift the picture?"
+            # Case 1: Sentence is a direct question in the text
+            # Route question to Focus Partner (B), UNLESS Speaker B just spoke and there's only 1 sentence!
+            if sent.endswith("?"):
+                target_spk = "B" if last_speaker == "A" or len(raw_sents) > 1 else "A"
+                if target_spk == "B":
+                    speaker_b_used_in_para = True
+                    consecutive_a_in_para = 0
+                else:
+                    consecutive_a_in_para += 1
                 dialogue_sentences.append(
                     _build_turn(
                         current_idx,
-                        pivot_prompt,
-                        speaker="B",
+                        sent,
+                        speaker=target_spk,
                         voice_a=voice_a,
                         voice_b=voice_b,
                         kind="prose",
                         override_mood="question",
-                        override_pause_ms=260,
+                        override_pause_ms=340,
                     )
                 )
                 current_idx += 1
+                continue
+
+            # Case 2: Sentence starts with a sharp contrast ("However,", "Yet,", "Instead,")
+            if CONTRAST_START_REGEX.search(sent):
+                core_claim = CONTRAST_START_REGEX.sub("", sent).strip()
+                if core_claim:
+                    core_claim = core_claim[0].upper() + core_claim[1:]
+                if last_speaker == "A":
+                    pivot_prompt = "Hold on — here is the twist. How does the picture shift here?"
+                    dialogue_sentences.append(
+                        _build_turn(
+                            current_idx,
+                            pivot_prompt,
+                            speaker="B",
+                            voice_a=voice_a,
+                            voice_b=voice_b,
+                            kind="prose",
+                            override_mood="question",
+                            override_pause_ms=280,
+                        )
+                    )
+                    current_idx += 1
+                    speaker_b_used_in_para = True
 
                 dialogue_sentences.append(
                     _build_turn(
@@ -375,68 +480,37 @@ def shape_article_into_dialogue(
                     )
                 )
                 current_idx += 1
+                consecutive_a_in_para = 1
                 continue
 
-            # Case 2: Sentence starts with a revelation trigger ("In fact,", "Crucially,")
+            # Case 3: Sentence starts with a revelation trigger ("In fact,", "Crucially,")
             if REVELATION_START_REGEX.search(sent):
                 core_rev = REVELATION_START_REGEX.sub("", sent).strip()
                 if core_rev:
-                    core_rev = core_rev[0].upper() + core_rev[1:]
-                # Anchor states the core revelation
+                    core_rev = core_rev[0].lower() + core_rev[1:]
+                # Focus Partner highlights the revelation directly in plain terms
+                rev_line = f"Wait — lock this part in: {core_rev or sent}"
                 dialogue_sentences.append(
                     _build_turn(
                         current_idx,
-                        core_rev or sent,
-                        speaker="A",
-                        voice_a=voice_a,
-                        voice_b=voice_b,
-                        kind="prose",
-                        override_mood="revelation",
-                        override_pause_ms=300,
-                    )
-                )
-                current_idx += 1
-
-                # Focus Partner locks in why it matters
-                lock_in = f"Let's lock that takeaway in — {concept} is the real lever here, not just surface details."
-                dialogue_sentences.append(
-                    _build_turn(
-                        current_idx,
-                        lock_in,
+                        rev_line,
                         speaker="B",
                         voice_a=voice_a,
                         voice_b=voice_b,
                         kind="prose",
                         is_paragraph_end=is_last_in_para,
-                        override_mood="punchy",
-                        override_pause_ms=480,
+                        override_mood="revelation",
+                        override_pause_ms=420,
                     )
                 )
                 current_idx += 1
+                speaker_b_used_in_para = True
+                consecutive_a_in_para = 0
                 continue
 
-            # Case 3: Sentence is a direct question in the text -> Route question to Focus Partner (B)
-            if sent.endswith("?"):
-                dialogue_sentences.append(
-                    _build_turn(
-                        current_idx,
-                        sent,
-                        speaker="B",
-                        voice_a=voice_a,
-                        voice_b=voice_b,
-                        kind="prose",
-                        override_mood="question",
-                        override_pause_ms=320,
-                    )
-                )
-                current_idx += 1
-                continue
-
-            # Case 4: High cognitive density sentence (> 17 words or multi-clause)
-            # Split or follow up with Focus Partner unpacking it into plain terms
-            setup_clause, takeaway_clause = _distill_dense_sentence(sent)
-            if takeaway_clause:
-                # Anchor delivers setup
+            # Case 4: Multi-clause dense sentence -> Anchor delivers setup, Focus Partner unpacks second half
+            setup_clause, unpack_turn, _ = _distill_dense_sentence(sent)
+            if unpack_turn:
                 dialogue_sentences.append(
                     _build_turn(
                         current_idx,
@@ -445,27 +519,61 @@ def shape_article_into_dialogue(
                         voice_a=voice_a,
                         voice_b=voice_b,
                         kind="prose",
-                        override_pause_ms=240,
+                        override_pause_ms=250,
                     )
                 )
                 current_idx += 1
 
-                # Focus Partner interrupts to unpack the second half in plain English
-                unpack_line = f"Wait — let's put that in plain terms: {takeaway_clause[0].lower() + takeaway_clause[1:] if len(takeaway_clause) > 1 else takeaway_clause}"
                 dialogue_sentences.append(
                     _build_turn(
                         current_idx,
-                        unpack_line,
+                        unpack_turn,
                         speaker="B",
                         voice_a=voice_a,
                         voice_b=voice_b,
                         kind="prose",
                         is_paragraph_end=is_last_in_para,
                         override_mood="revelation",
-                        override_pause_ms=460,
+                        override_pause_ms=420,
                     )
                 )
                 current_idx += 1
+                speaker_b_used_in_para = True
+                consecutive_a_in_para = 0
+                continue
+
+            # Case 5: If Anchor has spoken 2+ sentences in a row and we are at the final takeaway sentence
+            # of a multi-sentence paragraph, let Focus Partner (B) crystallize the concluding sentence!
+            if (
+                is_last_in_para
+                and not speaker_b_used_in_para
+                and consecutive_a_in_para >= 1
+                and len(words) >= 6
+            ):
+                prefix = takeaway_prefixes[bridge_cycle % len(takeaway_prefixes)]
+                bridge_cycle += 1
+                sent_lower = (
+                    sent[0].lower() + sent[1:]
+                    if len(sent) > 1 and not sent[:2].isupper() and not sent.startswith("I ")
+                    else sent
+                )
+                crystallized = f"{prefix}{sent_lower}"
+                dialogue_sentences.append(
+                    _build_turn(
+                        current_idx,
+                        crystallized,
+                        speaker="B",
+                        voice_a=voice_a,
+                        voice_b=voice_b,
+                        kind="prose",
+                        is_paragraph_end=True,
+                        override_mood="punchy",
+                        override_pause_ms=440,
+                    )
+                )
+                current_idx += 1
+                speaker_b_used_in_para = True
+                consecutive_a_in_para = 0
                 continue
 
             # Standard delivery by Anchor (Speaker A)
@@ -481,30 +589,33 @@ def shape_article_into_dialogue(
                 )
             )
             current_idx += 1
+            consecutive_a_in_para += 1
 
-            # If this paragraph had dense prose and Speaker B hasn't stepped in yet on this paragraph,
-            # add a brief cognitive check-in at paragraph boundary so the listener never drifts.
-            if is_last_in_para and len(words) >= 12:
-                clarifier_prompts = [
-                    f"Hold on — let's make sure that lands: why is {concept} the key piece to remember here?",
-                    f"So if we strip away the complexity, {concept} is really what drives the outcome.",
-                    f"Wait — pause on {concept} for a second. That is the exact mechanism everything else builds on.",
-                ]
-                prompt_text = clarifier_prompts[clarifier_cycle % len(clarifier_prompts)]
-                clarifier_cycle += 1
+            # Case 6: Single-sentence long paragraph where Speaker B hasn't stepped in yet
+            # Insert a natural cognitive check-in question from Speaker B before the next paragraph
+            if (
+                is_last_in_para
+                and not speaker_b_used_in_para
+                and len(words) >= 14
+                and p_idx < len(cleaned_paragraphs) - 1
+            ):
+                q_prompt = bridge_questions[bridge_cycle % len(bridge_questions)]
+                bridge_cycle += 1
                 dialogue_sentences.append(
                     _build_turn(
                         current_idx,
-                        prompt_text,
+                        q_prompt,
                         speaker="B",
                         voice_a=voice_a,
                         voice_b=voice_b,
                         kind="prose",
                         is_paragraph_end=True,
-                        override_mood="question" if prompt_text.endswith("?") else "punchy",
-                        override_pause_ms=420,
+                        override_mood="question",
+                        override_pause_ms=380,
                     )
                 )
                 current_idx += 1
+                speaker_b_used_in_para = True
+                consecutive_a_in_para = 0
 
     return dialogue_sentences

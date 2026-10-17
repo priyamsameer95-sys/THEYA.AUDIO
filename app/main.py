@@ -94,22 +94,50 @@ async def get_voices():
 async def extract_and_process(request: ExtractRequest) -> ExtractResponse:
     """Extracts clean article text from URL and splits it into TTS sentences."""
     target_url = str(request.url)
-    if not request.html and not request.dialogue_mode:
+    if not request.html:
         cached = DB.get_article(target_url)
         if cached and not str(cached.get("extractor_used", "")).endswith("_dialogue"):
             import json
             sentences_data = json.loads(cached["sentences_json"])
-            return ExtractResponse(
-                url=cached["url"],
-                title=cached["title"],
-                author=cached.get("author"),
-                sitename=cached.get("sitename"),
-                date=cached.get("date"),
-                extractor_used=cached["extractor_used"],
-                word_count=cached["word_count"],
-                estimated_read_minutes=cached["estimated_read_minutes"],
-                sentences=[SentenceModel(**s) for s in sentences_data],
-            )
+            if not request.dialogue_mode:
+                return ExtractResponse(
+                    url=cached["url"],
+                    title=cached["title"],
+                    author=cached.get("author"),
+                    sitename=cached.get("sitename"),
+                    date=cached.get("date"),
+                    extractor_used=cached["extractor_used"],
+                    word_count=cached["word_count"],
+                    estimated_read_minutes=cached["estimated_read_minutes"],
+                    sentences=[SentenceModel(**s) for s in sentences_data],
+                )
+            else:
+                from app.podcast.dialogue import shape_article_into_dialogue
+                prose_sents = [
+                    s["display_text"]
+                    for s in sentences_data
+                    if s.get("kind") == "prose" and s.get("display_text")
+                ]
+                paragraphs: List[str] = []
+                for i in range(0, len(prose_sents), 2):
+                    paragraphs.append(" ".join(prose_sents[i : i + 2]))
+                dialogue_sents = shape_article_into_dialogue(
+                    title=cached["title"],
+                    paragraphs=paragraphs,
+                    voice_a=request.voice_a,
+                    voice_b=request.voice_b,
+                )
+                return ExtractResponse(
+                    url=cached["url"],
+                    title=cached["title"],
+                    author=cached.get("author"),
+                    sitename=cached.get("sitename"),
+                    date=cached.get("date"),
+                    extractor_used=f"{cached['extractor_used']}_dialogue",
+                    word_count=cached["word_count"],
+                    estimated_read_minutes=cached["estimated_read_minutes"],
+                    sentences=[SentenceModel(**s) for s in dialogue_sents],
+                )
 
     try:
         raw_extraction = await extract_article(url=target_url, html=request.html)
@@ -151,33 +179,6 @@ async def extract_and_process(request: ExtractRequest) -> ExtractResponse:
             status_code=500, detail="An unexpected error occurred while extracting the page."
         ) from exc
 
-    if request.dialogue_mode:
-        from app.extract.document import extract_from_text
-        from app.podcast.dialogue import shape_article_into_dialogue
-
-        _, paragraphs = extract_from_text(raw_extraction.markdown, fallback_title=raw_extraction.title)
-        if not paragraphs:
-            paragraphs = [p.strip() for p in raw_extraction.markdown.split("\n\n") if p.strip()]
-        dialogue_sents = shape_article_into_dialogue(
-            title=raw_extraction.title,
-            paragraphs=paragraphs,
-            voice_a=request.voice_a,
-            voice_b=request.voice_b,
-        )
-        word_count = sum(len(p.split()) for p in paragraphs)
-        est_minutes = max(0.5, round(word_count / 150.0, 1))
-        return ExtractResponse(
-            url=raw_extraction.source_url,
-            title=raw_extraction.title,
-            author=raw_extraction.byline,
-            sitename=raw_extraction.sitename,
-            date=raw_extraction.date,
-            extractor_used=f"{raw_extraction.tier}_dialogue",
-            word_count=word_count,
-            estimated_read_minutes=est_minutes,
-            sentences=[SentenceModel(**s) for s in dialogue_sents],
-        )
-
     processed = create_processed_article(
         url=raw_extraction.source_url,
         title=raw_extraction.title,
@@ -194,7 +195,7 @@ async def extract_and_process(request: ExtractRequest) -> ExtractResponse:
             detail="The page was fetched, but no pronounceable sentences remained after filtering.",
         )
 
-    # Persist article to history database
+    # Persist base article to history database so toggling dialogue mode on/off is instant
     try:
         import json
         sentences_payload = json.dumps([s.to_dict() for s in processed.sentences])
@@ -211,6 +212,33 @@ async def extract_and_process(request: ExtractRequest) -> ExtractResponse:
         })
     except Exception as exc:
         logger.warning("Could not persist article to history: %s", exc)
+
+    if request.dialogue_mode:
+        from app.podcast.dialogue import shape_article_into_dialogue
+
+        prose_sents = [
+            s.display_text for s in processed.sentences if s.kind == "prose" and s.display_text
+        ]
+        paragraphs = []
+        for i in range(0, len(prose_sents), 2):
+            paragraphs.append(" ".join(prose_sents[i : i + 2]))
+        dialogue_sents = shape_article_into_dialogue(
+            title=processed.title,
+            paragraphs=paragraphs,
+            voice_a=request.voice_a,
+            voice_b=request.voice_b,
+        )
+        return ExtractResponse(
+            url=processed.url,
+            title=processed.title,
+            author=processed.byline,
+            sitename=processed.sitename,
+            date=processed.date,
+            extractor_used=f"{processed.extractor_used}_dialogue",
+            word_count=processed.word_count,
+            estimated_read_minutes=processed.estimated_read_minutes,
+            sentences=[SentenceModel(**s) for s in dialogue_sents],
+        )
 
     return ExtractResponse(**processed.to_dict())
 

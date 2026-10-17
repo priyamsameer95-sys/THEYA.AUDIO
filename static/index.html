@@ -2563,7 +2563,14 @@
         playIconSvg.style.display = "none";
         pauseIconSvg.style.display = "inline-block";
         statusDot.className = "status-dot";
-        statusText.textContent = "Streaming 24kHz";
+        const curSpk = hasSentences && state.sentences[state.currentIndex] ? state.sentences[state.currentIndex].speaker : null;
+        if (curSpk === "B") {
+          statusText.textContent = "VOICE B · FOCUS PARTNER";
+        } else if (curSpk === "A") {
+          statusText.textContent = "VOICE A · ANCHOR";
+        } else {
+          statusText.textContent = "Streaming 24kHz";
+        }
       } else if (isBuffering || isExtracting) {
         playIconSvg.style.display = "inline-block";
         pauseIconSvg.style.display = "none";
@@ -2573,7 +2580,7 @@
         playIconSvg.style.display = "inline-block";
         pauseIconSvg.style.display = "none";
         statusDot.className = "status-dot";
-        statusText.textContent = "24kHz PCM";
+        statusText.textContent = state.dialogueMode ? "2-Voice Ready" : "24kHz PCM";
       }
 
       if (hasSentences) {
@@ -2583,7 +2590,8 @@
         scrubberTime.textContent = `${state.currentIndex + 1} / ${state.sentences.length}`;
 
         const curItem = state.sentences[state.currentIndex];
-        dockSentenceSnippet.textContent = curItem ? curItem.display_text : "";
+        const prefix = curItem && curItem.speaker ? `[${curItem.speaker_name || (curItem.speaker === "B" ? "Focus Partner" : "Anchor")}] ` : "";
+        dockSentenceSnippet.textContent = curItem ? prefix + curItem.display_text : "";
       } else {
         scrubberFill.style.width = "0%";
         scrubberTime.textContent = "0 / 0";
@@ -2700,7 +2708,7 @@
       });
     }
 
-    function syncDialogueMode(enabled) {
+    async function syncDialogueMode(enabled, triggerExtraction = true) {
       state.dialogueMode = enabled;
       if (dialogueModeToggle) dialogueModeToggle.checked = enabled;
       const modalToggle = document.getElementById("modalDialogueModeToggle");
@@ -2709,21 +2717,54 @@
         voiceBControlGroup.style.display = enabled ? "flex" : "none";
       }
       showToast(enabled ? "2-Voice Focus Dialogue enabled (Anchor + Focus Partner)" : "Single-Voice Monograph Mode");
-      if (state.article && state.article.url && state.article.url.startsWith("http")) {
-        loadAndExtractUrl(state.article.url, 0, state.status === AppState.PLAYING);
+
+      if (!triggerExtraction) return;
+
+      if (state.article && state.article.url) {
+        if (state.article.url.startsWith("http")) {
+          loadAndExtractUrl(state.article.url, 0, true);
+        } else if (state.sentences && state.sentences.length > 0) {
+          // Convert already-loaded uploaded document or pasted text on the fly
+          const baseLines = state.sentences
+            .filter(s => s.kind === "prose" && (!s.speaker || s.speaker === "A"))
+            .map(s => s.display_text);
+          const reconstructed = baseLines.join("\n\n");
+          if (reconstructed.length >= 10) {
+            try {
+              const res = await fetch("/api/extract/text", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  text: reconstructed,
+                  title: state.article.title || "Focused Monograph",
+                  podcast_mode: true,
+                  dialogue_mode: enabled,
+                  voice_a: state.voice,
+                  voice_b: state.voiceB,
+                }),
+              });
+              if (res.ok) {
+                const data = await res.json();
+                handleExtractedDocumentSuccess(data);
+              }
+            } catch (e) {}
+          }
+        }
+      } else if (urlInput.value && urlInput.value.trim().startsWith("http")) {
+        loadAndExtractUrl(urlInput.value.trim(), 0, true);
       }
     }
 
     if (dialogueModeToggle) {
       dialogueModeToggle.addEventListener("change", () => {
-        syncDialogueMode(dialogueModeToggle.checked);
+        syncDialogueMode(dialogueModeToggle.checked, true);
       });
     }
 
     const modalDialogueModeToggle = document.getElementById("modalDialogueModeToggle");
     if (modalDialogueModeToggle) {
       modalDialogueModeToggle.addEventListener("change", () => {
-        syncDialogueMode(modalDialogueModeToggle.checked);
+        syncDialogueMode(modalDialogueModeToggle.checked, false);
       });
     }
 
