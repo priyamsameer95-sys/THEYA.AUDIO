@@ -72,3 +72,55 @@ def test_cache_inflight_deduplication() -> None:
         assert cache.get("same_key") == b"synthesized_audio"
 
     run(_test())
+
+
+def test_kokoro_inference_client_fal_ai(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verifies Kokoro-82M calls huggingface_hub.InferenceClient(provider='fal-ai') with model='hexgrad/Kokoro-82M'."""
+    from app.tts import kokoro
+
+    recorded_init = {}
+    recorded_call = {}
+
+    class DummyInferenceClient:
+        def __init__(self, provider: str = "", api_key: str = "") -> None:
+            recorded_init["provider"] = provider
+            recorded_init["api_key"] = api_key
+
+        def text_to_speech(self, text: str, model: str = "") -> bytes:
+            recorded_call["text"] = text
+            recorded_call["model"] = model
+            return b"RIFF_fake_kokoro_audio_bytes"
+
+    monkeypatch.setattr(kokoro, "InferenceClient", DummyInferenceClient)
+    monkeypatch.setenv("HF_TOKEN", "hf_test_secret_token")
+
+    audio = kokoro.synthesize_kokoro_sync("The answer to the universe is 42")
+    assert audio == b"RIFF_fake_kokoro_audio_bytes"
+    assert recorded_init["provider"] == "fal-ai"
+    assert recorded_init["api_key"] == "hf_test_secret_token"
+    assert recorded_call["text"] == "The answer to the universe is 42"
+    assert recorded_call["model"] == "hexgrad/Kokoro-82M"
+
+
+def test_hf_token_api_configuration(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verifies /api/settings/hf-token sets HF_TOKEN for Kokoro-82M."""
+    import os
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    client = TestClient(app)
+
+    res_post = client.post("/api/settings/hf-token", json={"token": "hf_demo_1234567890"})
+    assert res_post.status_code == 200
+    assert res_post.json()["configured"] is True
+    assert res_post.json()["model"] == "hexgrad/Kokoro-82M"
+    assert res_post.json()["provider"] == "fal-ai"
+    assert os.environ.get("HF_TOKEN") == "hf_demo_1234567890"
+
+    res_get = client.get("/api/settings/hf-token")
+    assert res_get.status_code == 200
+    assert res_get.json()["configured"] is True
+    assert "hf_de...7890" in (res_get.json()["masked_token"] or "")
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+

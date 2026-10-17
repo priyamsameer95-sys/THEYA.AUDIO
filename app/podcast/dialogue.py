@@ -395,15 +395,17 @@ def _try_llm_focus_dialogue(
     title: str,
     paragraphs: List[str],
 ) -> Optional[List[Tuple[str, str]]]:
-    """Uses Gemini, Groq, OpenAI, or local Ollama if available to generate a deep 2-person
+    """Uses Hugging Face InferenceClient (HF_TOKEN), Gemini, Groq, or OpenAI if available
 
-    thought-sharing podcast conversation. Falls back gracefully if no key/server is present.
+    to generate a deep 2-person thought-sharing podcast conversation.
+    Falls back gracefully if no key/server is present.
     """
+    hf_key = os.environ.get("HF_TOKEN", "").strip()
     gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
     openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
     groq_key = os.environ.get("GROQ_API_KEY", "").strip()
 
-    if not (gemini_key or openai_key or groq_key):
+    if not (hf_key or gemini_key or openai_key or groq_key):
         return None
 
     source_text = "\n\n".join(paragraphs[:20])
@@ -421,6 +423,36 @@ def _try_llm_focus_dialogue(
     )
 
     try:
+        if hf_key:
+            from huggingface_hub import InferenceClient
+
+            hf_client = InferenceClient(api_key=hf_key)
+            chat_res = hf_client.chat_completion(
+                model="Qwen/Qwen2.5-72B-Instruct",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Title: {title}\n\nDocument:\n{source_text}"},
+                ],
+                max_tokens=1800,
+                temperature=0.35,
+            )
+            raw_content = chat_res.choices[0].message.content or ""
+            # Extract JSON object even if wrapped in markdown fences
+            m_json = re.search(r"\{[\s\S]*\}", raw_content)
+            if m_json:
+                parsed = json.loads(m_json.group(0))
+                turns = parsed.get("turns", [])
+                result = [
+                    (
+                        "B" if str(t.get("speaker", "A")).upper() == "B" else "A",
+                        strip_cheesy_banter(str(t.get("text", ""))),
+                    )
+                    for t in turns
+                    if str(t.get("text", "")).strip()
+                ]
+                if len(result) >= 4:
+                    return result
+
         if gemini_key:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}"
             payload = json.dumps({

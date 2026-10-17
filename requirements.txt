@@ -9,6 +9,7 @@ pysbd>=0.3.4
 
 # Streaming Neural TTS & Web Server (Phases 3 & 4)
 edge-tts>=6.1.12
+huggingface_hub>=1.0.0
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 

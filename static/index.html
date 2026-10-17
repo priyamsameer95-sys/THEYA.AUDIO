@@ -1364,29 +1364,74 @@
         </div>
 
         <div class="control-group">
+          <label for="ttsEngineSelect" class="control-label">Synthesis Model</label>
+          <select id="ttsEngineSelect" class="select-input">
+            <option value="edge" selected>Microsoft Edge Neural (24kHz)</option>
+            <option value="kokoro">Kokoro-82M · hexgrad/Kokoro-82M (fal-ai)</option>
+          </select>
+        </div>
+
+        <div class="control-group" id="hfTokenGroup" style="display:none; background:var(--bg-recessed); padding:0.55rem; border:1px solid var(--border-rule);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+            <label for="hfTokenInput" class="control-label" style="margin:0;">HF_TOKEN (fal-ai)</label>
+            <span id="hfTokenBadge" class="font-mono" style="font-size:9px; color:var(--accent);">REQUIRED</span>
+          </div>
+          <div style="display:flex; gap:0.35rem;">
+            <input
+              type="password"
+              id="hfTokenInput"
+              placeholder="hf_..."
+              class="select-input"
+              style="flex:1; font-family:var(--font-mono); font-size:11px; padding:0.3rem 0.5rem;"
+            />
+            <button
+              type="button"
+              id="saveHfTokenBtn"
+              class="btn-secondary"
+              style="padding:0.3rem 0.55rem; font-size:10px; font-family:var(--font-mono);"
+            >SAVE</button>
+          </div>
+        </div>
+
+        <div class="control-group">
           <label for="voiceSelect" id="voiceSelectLabel" class="control-label">Anchor Speaker (Voice A)</label>
           <select id="voiceSelect" class="select-input">
-            <option value="en-US-AndrewMultilingualNeural">Andrew (US / Natural Studio)</option>
-            <option value="en-US-AvaMultilingualNeural">Ava (US / Clear &amp; Expressive)</option>
-            <option value="en-US-AriaNeural">Aria (US / Expressive)</option>
-            <option value="en-GB-RyanNeural">Ryan (UK / Monograph)</option>
-            <option value="en-GB-SoniaNeural">Sonia (UK / Documentary)</option>
-            <option value="en-IN-NeerjaExpressiveNeural">Neerja (India / Melodic)</option>
-            <option value="hi-IN-MadhurNeural">Madhur (India / Clear)</option>
-            <option value="de-DE-KillianNeural">Killian (Continental)</option>
+            <optgroup label="Kokoro-82M (hexgrad/Kokoro-82M)">
+              <option value="kokoro:af_heart">Kokoro · Heart (US Flagship)</option>
+              <option value="kokoro:am_adam">Kokoro · Adam (US Warm Male)</option>
+              <option value="kokoro:af_bella">Kokoro · Bella (US Expressive)</option>
+              <option value="kokoro:am_michael">Kokoro · Michael (US Conversational)</option>
+            </optgroup>
+            <optgroup label="Microsoft Edge Neural">
+              <option value="en-US-AndrewMultilingualNeural" selected>Andrew (US / Natural Studio)</option>
+              <option value="en-US-AvaMultilingualNeural">Ava (US / Clear &amp; Expressive)</option>
+              <option value="en-US-AriaNeural">Aria (US / Expressive)</option>
+              <option value="en-GB-RyanNeural">Ryan (UK / Monograph)</option>
+              <option value="en-GB-SoniaNeural">Sonia (UK / Documentary)</option>
+              <option value="en-IN-NeerjaExpressiveNeural">Neerja (India / Melodic)</option>
+              <option value="hi-IN-MadhurNeural">Madhur (India / Clear)</option>
+              <option value="de-DE-KillianNeural">Killian (Continental)</option>
+            </optgroup>
           </select>
         </div>
 
         <div class="control-group" id="voiceBControlGroup" style="display:none;">
-          <label for="voiceBSelect" class="control-label" style="color:#38bdf8;">Focus Partner (Voice B)</label>
+          <label for="voiceBSelect" class="control-label" style="color:var(--forest);">Focus Partner (Voice B)</label>
           <select id="voiceBSelect" class="select-input">
-            <option value="en-US-AvaMultilingualNeural" selected>Ava (US / Clear &amp; Expressive)</option>
-            <option value="en-GB-SoniaNeural">Sonia (UK / Documentary)</option>
-            <option value="en-US-AriaNeural">Aria (US / Editorial)</option>
-            <option value="en-GB-RyanNeural">Ryan (UK / Conversational)</option>
-            <option value="en-US-AndrewMultilingualNeural">Andrew (US / Warm Narrator)</option>
-            <option value="en-IN-NeerjaExpressiveNeural">Neerja (India / Expressive)</option>
-            <option value="hi-IN-SwaraNeural">Swara (India / Clear)</option>
+            <optgroup label="Kokoro-82M (hexgrad/Kokoro-82M)">
+              <option value="kokoro:af_bella">Kokoro · Bella (US Expressive)</option>
+              <option value="kokoro:af_heart">Kokoro · Heart (US Flagship)</option>
+              <option value="kokoro:am_michael">Kokoro · Michael (US Conversational)</option>
+            </optgroup>
+            <optgroup label="Microsoft Edge Neural">
+              <option value="en-US-AvaMultilingualNeural" selected>Ava (US / Clear &amp; Expressive)</option>
+              <option value="en-GB-SoniaNeural">Sonia (UK / Documentary)</option>
+              <option value="en-US-AriaNeural">Aria (US / Editorial)</option>
+              <option value="en-GB-RyanNeural">Ryan (UK / Conversational)</option>
+              <option value="en-US-AndrewMultilingualNeural">Andrew (US / Warm Narrator)</option>
+              <option value="en-IN-NeerjaExpressiveNeural">Neerja (India / Expressive)</option>
+              <option value="hi-IN-SwaraNeural">Swara (India / Clear)</option>
+            </optgroup>
           </select>
         </div>
 
@@ -1691,6 +1736,7 @@
       autoScroll: true,
       focusMode: false,
       dialogueMode: false,
+      engine: "edge",
       voice: "en-US-AndrewMultilingualNeural",
       voiceB: "en-US-AvaMultilingualNeural",
       rate: "+0%",
@@ -1728,6 +1774,11 @@
     const statusDot = document.getElementById("statusDot");
     const statusText = document.getElementById("statusText");
     const dialogueModeToggle = document.getElementById("dialogueModeToggle");
+    const ttsEngineSelect = document.getElementById("ttsEngineSelect");
+    const hfTokenGroup = document.getElementById("hfTokenGroup");
+    const hfTokenInput = document.getElementById("hfTokenInput");
+    const saveHfTokenBtn = document.getElementById("saveHfTokenBtn");
+    const hfTokenBadge = document.getElementById("hfTokenBadge");
     const voiceSelect = document.getElementById("voiceSelect");
     const voiceBControlGroup = document.getElementById("voiceBControlGroup");
     const voiceBSelect = document.getElementById("voiceBSelect");
@@ -2209,7 +2260,8 @@
     // 5. Audio Synthesis & Lookahead Prefetch
     // -------------------------------------------------------------------------
     function makeAudioUrl(text, voice, rate) {
-      const q = new URLSearchParams({ text: text, voice: voice, rate: rate });
+      const effectiveEngine = voice && voice.startsWith("kokoro:") ? "kokoro" : state.engine;
+      const q = new URLSearchParams({ text: text, voice: voice, rate: rate, engine: effectiveEngine });
       return `/api/tts?${q.toString()}`;
     }
 
@@ -2227,12 +2279,15 @@
       if (!text) return;
 
       const targetVoice = resolveSentenceVoice(item);
-      const key = `${targetVoice}|${state.rate}|${index}|${text}`;
+      const key = `${state.engine}|${targetVoice}|${state.rate}|${index}|${text}`;
       if (audioBlobCache.has(key) || inflightPrefetches.has(key)) return;
 
       const url = makeAudioUrl(text, targetVoice, state.rate);
       const promise = fetch(url)
-        .then(res => res.blob())
+        .then(res => {
+          if (!res.ok) throw new Error("Prefetch failed");
+          return res.blob();
+        })
         .then(blob => {
           const objectUrl = URL.createObjectURL(blob);
           audioBlobCache.set(key, objectUrl);
@@ -2257,7 +2312,7 @@
       const item = state.sentences[index];
       const text = (item.speech_text || item.display_text || "").trim();
       const targetVoice = resolveSentenceVoice(item);
-      const key = `${targetVoice}|${state.rate}|${index}|${text}`;
+      const key = `${state.engine}|${targetVoice}|${state.rate}|${index}|${text}`;
 
       if (audioBlobCache.has(key)) return audioBlobCache.get(key);
       if (inflightPrefetches.has(key)) {
@@ -2266,7 +2321,10 @@
       }
 
       const res = await fetch(makeAudioUrl(text, targetVoice, state.rate));
-      if (!res.ok) throw new Error("Synthesis failed");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Synthesis failed");
+      }
       const blob = await res.blob();
       const objectUrl = URL.createObjectURL(blob);
       audioBlobCache.set(key, objectUrl);
@@ -2325,6 +2383,10 @@
         if (currentGen === state.generation) {
           state.status = AppState.ERROR;
           updateUI();
+          if (err && err.message && err.message.includes("HF_TOKEN")) {
+            if (hfTokenGroup) hfTokenGroup.style.display = "block";
+            showToast("Kokoro-82M requires HF_TOKEN — paste your token in the Studio Console");
+          }
         }
       }
     }
@@ -2569,7 +2631,7 @@
         } else if (curSpk === "A") {
           statusText.textContent = "VOICE A · ANCHOR";
         } else {
-          statusText.textContent = "Streaming 24kHz";
+          statusText.textContent = state.engine === "kokoro" ? "Kokoro-82M" : "Streaming 24kHz";
         }
       } else if (isBuffering || isExtracting) {
         playIconSvg.style.display = "inline-block";
@@ -2580,7 +2642,7 @@
         playIconSvg.style.display = "inline-block";
         pauseIconSvg.style.display = "none";
         statusDot.className = "status-dot";
-        statusText.textContent = state.dialogueMode ? "2-Voice Ready" : "24kHz PCM";
+        statusText.textContent = state.engine === "kokoro" ? "Kokoro-82M" : (state.dialogueMode ? "2-Voice Ready" : "24kHz PCM");
       }
 
       if (hasSentences) {
@@ -2693,9 +2755,70 @@
       });
     });
 
+    // Kokoro-82M (hexgrad/Kokoro-82M via fal-ai) & HF_TOKEN Controls
+    async function checkHfTokenStatus() {
+      try {
+        const res = await fetch("/api/settings/hf-token");
+        if (res.ok) {
+          const data = await res.json();
+          if (hfTokenBadge) {
+            hfTokenBadge.textContent = data.configured ? "ACTIVE" : "REQUIRED";
+            hfTokenBadge.style.color = data.configured ? "var(--forest)" : "var(--accent)";
+          }
+          if (data.configured && hfTokenInput) {
+            hfTokenInput.placeholder = data.masked_token || "hf_••••••••";
+          }
+        }
+      } catch (e) {}
+    }
+    checkHfTokenStatus();
+
+    if (ttsEngineSelect) {
+      ttsEngineSelect.addEventListener("change", () => {
+        state.engine = ttsEngineSelect.value;
+        if (hfTokenGroup) {
+          hfTokenGroup.style.display = state.engine === "kokoro" ? "block" : "none";
+        }
+        audioBlobCache.clear();
+        updateUI();
+        showToast(state.engine === "kokoro" ? "Switched to hexgrad/Kokoro-82M (fal-ai)" : "Switched to Microsoft Edge Neural (24kHz)");
+        if (state.status === AppState.PLAYING) playSentence(state.currentIndex, true);
+      });
+    }
+
+    if (saveHfTokenBtn && hfTokenInput) {
+      saveHfTokenBtn.addEventListener("click", async () => {
+        const token = hfTokenInput.value.trim();
+        if (!token) {
+          showToast("Please paste your Hugging Face token (hf_...)");
+          return;
+        }
+        try {
+          const res = await fetch("/api/settings/hf-token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token }),
+          });
+          if (res.ok) {
+            hfTokenInput.value = "";
+            await checkHfTokenStatus();
+            audioBlobCache.clear();
+            showToast("HF_TOKEN saved! hexgrad/Kokoro-82M (fal-ai) is now active.");
+          }
+        } catch (e) {
+          showToast("Failed to save HF_TOKEN");
+        }
+      });
+    }
+
     // Neural Voice & Speed
     voiceSelect.addEventListener("change", () => {
       state.voice = voiceSelect.value;
+      if (state.voice.startsWith("kokoro:")) {
+        state.engine = "kokoro";
+        if (ttsEngineSelect) ttsEngineSelect.value = "kokoro";
+        if (hfTokenGroup) hfTokenGroup.style.display = "block";
+      }
       audioBlobCache.clear();
       if (state.status === AppState.PLAYING) playSentence(state.currentIndex, true);
     });
@@ -2703,6 +2826,9 @@
     if (voiceBSelect) {
       voiceBSelect.addEventListener("change", () => {
         state.voiceB = voiceBSelect.value;
+        if (state.voiceB.startsWith("kokoro:") && hfTokenGroup) {
+          hfTokenGroup.style.display = "block";
+        }
         audioBlobCache.clear();
         if (state.status === AppState.PLAYING) playSentence(state.currentIndex, true);
       });

@@ -6,6 +6,7 @@ from typing import Tuple
 
 from app.tts.cache import AUDIO_CACHE, AudioLRUCache
 from app.tts.edge import synthesize_edge_tts
+from app.tts.kokoro import synthesize_kokoro_tts
 from app.tts.voices import DEFAULT_VOICE_ID
 
 logger = logging.getLogger("theya.tts.router")
@@ -22,10 +23,13 @@ async def get_or_synthesize_speech(
     Returns:
         (audio_bytes, was_cache_hit)
     """
-    key = AudioLRUCache.make_key(text=text, voice=voice, rate=rate, engine=engine)
+    effective_engine = "kokoro" if (engine == "kokoro" or voice.startswith("kokoro:")) else engine
+    key = AudioLRUCache.make_key(text=text, voice=voice, rate=rate, engine=effective_engine)
 
     async def _do_synth() -> bytes:
-        if engine == "edge":
+        if effective_engine == "kokoro":
+            return await synthesize_kokoro_tts(text=text, voice=voice, rate=rate)
+        if effective_engine == "edge":
             return await synthesize_edge_tts(text=text, voice=voice, rate=rate)
         raise ValueError(f"Unknown TTS engine: {engine}")
 

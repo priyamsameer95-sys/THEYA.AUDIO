@@ -22,7 +22,14 @@ from app.db import DB
 from app.extract import ExtractionError, extract_article
 from app.feedback import FeedbackRequest
 from app.text import create_processed_article
-from app.tts import AVAILABLE_VOICES, DEFAULT_VOICE_ID, get_or_synthesize_speech
+from app.tts import (
+    AVAILABLE_VOICES,
+    DEFAULT_VOICE_ID,
+    KOKORO_VOICES,
+    get_or_synthesize_speech,
+    resolve_hf_token,
+    set_hf_token,
+)
 
 logger = logging.getLogger("theya.main")
 
@@ -84,10 +91,43 @@ class ExtractResponse(BaseModel):
     sentences: List[SentenceModel]
 
 
+class HFTokenRequest(BaseModel):
+    token: str = Field(..., description="Hugging Face API token (HF_TOKEN) for hexgrad/Kokoro-82M via fal-ai")
+
+
 @app.get("/api/voices")
 async def get_voices():
-    """Returns curated high-naturalness neural voices for the UI."""
-    return {"voices": AVAILABLE_VOICES}
+    """Returns curated high-naturalness neural voices (Edge + Kokoro-82M) for the UI."""
+    return {
+        "voices": AVAILABLE_VOICES + KOKORO_VOICES,
+        "kokoro_voices": KOKORO_VOICES,
+        "hf_token_configured": bool(resolve_hf_token()),
+    }
+
+
+@app.get("/api/settings/hf-token")
+async def get_hf_token_status():
+    """Checks whether HF_TOKEN is configured for hexgrad/Kokoro-82M."""
+    token = resolve_hf_token()
+    masked = f"{token[:5]}...{token[-4:]}" if token and len(token) > 9 else ("configured" if token else None)
+    return {
+        "configured": bool(token),
+        "masked_token": masked,
+        "model": "hexgrad/Kokoro-82M",
+        "provider": "fal-ai",
+    }
+
+
+@app.post("/api/settings/hf-token")
+async def configure_hf_token(req: HFTokenRequest):
+    """Configures HF_TOKEN in runtime environment for hexgrad/Kokoro-82M and AI dialogue."""
+    ok = set_hf_token(req.token)
+    return {
+        "status": "ok",
+        "configured": ok,
+        "model": "hexgrad/Kokoro-82M",
+        "provider": "fal-ai",
+    }
 
 
 @app.post("/api/extract", response_model=ExtractResponse)
@@ -408,9 +448,17 @@ async def stream_tts(
         logger.error("TTS synthesis error: %s", exc)
         raise HTTPException(status_code=503, detail=f"TTS synthesis failed: {exc}") from exc
 
+    media_type = "audio/mpeg"
+    if audio_bytes.startswith(b"RIFF"):
+        media_type = "audio/wav"
+    elif audio_bytes.startswith(b"fLaC"):
+        media_type = "audio/flac"
+    elif audio_bytes.startswith(b"OggS"):
+        media_type = "audio/ogg"
+
     return StreamingResponse(
         io.BytesIO(audio_bytes),
-        media_type="audio/mpeg",
+        media_type=media_type,
         headers={
             "X-Cache": "HIT" if was_hit else "MISS",
             "Cache-Control": "public, max-age=3600",
