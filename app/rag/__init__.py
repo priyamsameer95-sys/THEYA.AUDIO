@@ -9,12 +9,14 @@ from app.rag.evals import (
     run_backend_eval_suite,
 )
 from app.rag.pipeline import (
+    distill_document_ideas,
     index_document_for_rag,
     query_rag,
     retrieve_top_chunks,
 )
 
 __all__ = [
+    "distill_document_ideas",
     "eval_anti_slop_dialogue_quality",
     "eval_context_relevance_and_recall",
     "eval_faithfulness_and_grounding",

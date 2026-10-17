@@ -523,6 +523,24 @@ async def rag_query_endpoint(req: RAGQueryRequest):
     )
 
 
+class RAGDistillRequest(BaseModel):
+    doc_url: Optional[str] = Field(None, description="Optional document URL to distill (uses latest if omitted)")
+    voice_a: str = Field(DEFAULT_VOICE_ID, description="Anchor Voice ID (Speaker A)")
+    voice_b: str = Field("en-US-AvaMultilingualNeural", description="Focus Partner Voice ID (Speaker B)")
+
+
+@app.post("/api/rag/distill")
+async def rag_distill_endpoint(req: RAGDistillRequest):
+    """Automatically runs pre-seeded Idea Distillation (Core Thesis, Key Tradeoffs, First-Principles) and 3 Backend Evals."""
+    from app.rag import distill_document_ideas
+
+    return distill_document_ideas(
+        doc_url=req.doc_url,
+        voice_a=req.voice_a,
+        voice_b=req.voice_b,
+    )
+
+
 @app.get("/api/rag/evals")
 async def rag_evals_dashboard_endpoint(limit: int = Query(25, ge=1, le=100)):
     """Returns live telemetry and historical scores across the 3 backend RAG & Dialogue evaluations."""

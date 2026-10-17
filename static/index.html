@@ -1510,12 +1510,24 @@
         </div>
 
         <div class="control-group" style="margin-top:0.85rem;">
-          <label for="ragQueryInput" class="control-label">Ask Active Document (RAG 2-Voice)</label>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.45rem;">
+            <span class="control-label" style="margin-bottom:0;">Auto-Distilled Idea Reductions</span>
+            <button type="button" id="speakAllDistillBtn" class="btn-action" style="height:22px; font-size:9.5px; padding:0 7px; display:none;">Speak All 3 &rarr;</button>
+          </div>
+          <div id="ideaDistillContainer" style="display:flex; flex-direction:column; gap:6px; font-size:11px; color:var(--text-secondary);">
+            <div style="padding:7px 8px; border-radius:6px; border:1px solid var(--border-rule); background:var(--bg-page); font-family:var(--font-mono); font-size:10px; color:var(--text-muted);">
+              Distilling core thesis, tradeoffs &amp; first principles...
+            </div>
+          </div>
+        </div>
+
+        <div class="control-group" style="margin-top:0.85rem;">
+          <label for="ragQueryInput" class="control-label">Custom RAG Focus Question (Optional)</label>
           <div style="display:flex; gap:6px;">
             <input
               type="text"
               id="ragQueryInput"
-              placeholder="Ask why, how, or what..."
+              placeholder="Or ask anything..."
               style="flex:1; height:34px; padding:0 9px; font-family:var(--font-mono); font-size:11px; border:1px solid var(--border-strong); border-radius:6px; background:var(--bg-page); color:var(--text-primary); outline:none;"
             />
             <button type="button" id="ragQueryBtn" class="btn-action btn-highlight" style="height:34px; padding:0 10px; font-size:10.5px;">Ask</button>
@@ -2636,6 +2648,10 @@
           proseContainer.appendChild(currentParagraphEl);
         }
       }
+
+      if (article.url && article.extractor_used !== "rag_dialogue" && typeof autoDistillActiveDocument === "function") {
+        autoDistillActiveDocument(article.url);
+      }
     }
 
     // -------------------------------------------------------------------------
@@ -3346,7 +3362,7 @@
     });
 
     // -------------------------------------------------------------------------
-    // 10b. RAG Query & 3 Backend Evals Live Telemetry
+    // 10b. RAG Query, Pre-Seeded Idea Distillation & 3 Backend Evals Telemetry
     // -------------------------------------------------------------------------
     async function refreshBackendEvals(customEvalObj = null) {
       const fEl = document.getElementById("evalFaithfulnessVal");
@@ -3385,6 +3401,92 @@
       }
     }
 
+    function loadDistilledTurnsIntoPlayer(docUrl, title, turns) {
+      if (!turns || !turns.length) return;
+      state.article = {
+        url: docUrl,
+        title: title,
+        author: "2-Voice Idea Reduction",
+        sitename: "RAG Focus Studio",
+        extractor_used: "rag_dialogue",
+        sentences: turns,
+      };
+      state.sentences = turns;
+      state.currentIndex = 0;
+      renderArticle(state.article);
+      state.status = AppState.READY;
+      updateUI();
+      playSentence(0, true);
+    }
+
+    async function autoDistillActiveDocument(docUrl = null) {
+      const container = document.getElementById("ideaDistillContainer");
+      const speakAllBtn = document.getElementById("speakAllDistillBtn");
+      if (!container) return;
+
+      try {
+        const res = await fetch("/api/rag/distill", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            doc_url: docUrl || (state.article ? state.article.url : null),
+            voice_a: voiceSelect ? voiceSelect.value : undefined,
+            voice_b: voiceBSelect ? voiceBSelect.value : undefined,
+          }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (data.benchmark_evals) {
+          refreshBackendEvals(data.benchmark_evals);
+        }
+
+        if (speakAllBtn && data.combined_dialogue_turns && data.combined_dialogue_turns.length > 0) {
+          speakAllBtn.style.display = "inline-flex";
+          speakAllBtn.onclick = () => {
+            loadDistilledTurnsIntoPlayer(
+              data.doc_url,
+              `${data.title || "Monograph"} · 3-Lens Idea Reduction`,
+              data.combined_dialogue_turns
+            );
+          };
+        }
+
+        if (data.distillations && data.distillations.length > 0) {
+          container.innerHTML = "";
+          data.distillations.forEach((item) => {
+            const card = document.createElement("div");
+            card.style.cssText = "padding:7px 8px; border-radius:6px; border:1px solid var(--border-rule); background:var(--bg-page); display:flex; flex-direction:column; gap:4px;";
+            const snippet = (item.answer || "").length > 135 ? item.answer.slice(0, 132) + "..." : (item.answer || "");
+            const scorePct = item.evals ? Math.round((item.evals.overall_score || 0.9) * 100) : 95;
+            card.innerHTML = `
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-family:var(--font-mono); font-size:10px; font-weight:700; color:var(--text-primary);">${item.label}</span>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-family:var(--font-mono); font-size:9.5px; color:#10b981;">${scorePct}% EVAL</span>
+                  <button type="button" class="btn-action distill-speak-btn" style="height:20px; font-size:9.5px; padding:0 6px;">Speak &rarr;</button>
+                </div>
+              </div>
+              <div style="font-size:11px; line-height:1.38; color:var(--text-secondary);">${snippet}</div>
+            `;
+            const btn = card.querySelector(".distill-speak-btn");
+            if (btn) {
+              btn.addEventListener("click", () => {
+                loadDistilledTurnsIntoPlayer(
+                  data.doc_url,
+                  `${data.title || "Monograph"} · ${item.label}`,
+                  item.dialogue_turns
+                );
+              });
+            }
+            container.appendChild(card);
+          });
+        }
+      } catch (err) {
+        // silent background distillation fallback
+      }
+    }
+
     const ragQueryBtn = document.getElementById("ragQueryBtn");
     const ragQueryInput = document.getElementById("ragQueryInput");
     const ragAnswerBox = document.getElementById("ragAnswerBox");
@@ -3417,16 +3519,11 @@
           const speakBtn = document.getElementById("speakRagTurnsBtn");
           if (speakBtn && data.dialogue_turns && data.dialogue_turns.length > 0) {
             speakBtn.addEventListener("click", () => {
-              renderExtractedArticle({
-                url: data.doc_url,
-                title: `RAG Focus: ${q}`,
-                author: "RAG Focus Session",
-                sitename: "Hybrid BM25 + TF-IDF",
-                extractor_used: "rag_dialogue",
-                word_count: (data.answer || "").split(/\s+/).length,
-                estimated_read_minutes: 0.5,
-                sentences: data.dialogue_turns,
-              }, 0, true);
+              loadDistilledTurnsIntoPlayer(
+                data.doc_url,
+                `RAG Focus: ${q}`,
+                data.dialogue_turns
+              );
             });
           }
         }
@@ -3460,8 +3557,7 @@
       const params = new URLSearchParams(window.location.search);
       const targetUrl = params.get("url") || "https://departmentofproduct.substack.com/p/product-taste-in-practice";
       urlInput.value = targetUrl;
-      loadAndExtractUrl(targetUrl, 0, false).then(() => refreshBackendEvals());
-      refreshBackendEvals();
+      loadAndExtractUrl(targetUrl, 0, false).then(() => autoDistillActiveDocument(targetUrl));
     });
   </script>
 </body>

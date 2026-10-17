@@ -10,7 +10,12 @@ from app.rag.evals import (
     eval_faithfulness_and_grounding,
     run_backend_eval_suite,
 )
-from app.rag.pipeline import index_document_for_rag, query_rag, retrieve_top_chunks
+from app.rag.pipeline import (
+    distill_document_ideas,
+    index_document_for_rag,
+    query_rag,
+    retrieve_top_chunks,
+)
 
 
 def test_rag_chunking_and_hybrid_retrieval() -> None:
@@ -173,3 +178,46 @@ def test_rag_api_query_and_eval_endpoints() -> None:
     assert "faithfulness_and_grounding" in metrics
     assert "context_relevance_and_recall" in metrics
     assert "anti_slop_dialogue_quality" in metrics
+
+
+def test_auto_idea_distillation_and_preseeded_evals() -> None:
+    """Verifies zero-prompt Idea Distillation (Core Thesis, Key Tradeoffs, First-Principles) and pre-seeded evals."""
+    client = TestClient(app)
+    text = (
+        "# Product Taste in Practice\n\n"
+        "In his eyes, the era of growth hacking was over - and in its place was a return to craft and quality.\n\n"
+        "As AI commoditizes underlying proprietary models, companies differentiate through network effects, brand, and product taste rather than raw model weights.\n\n"
+        "Consequently, teams that reduce complex workflows into clear mental models win long-term user retention."
+    )
+    res_ext = client.post(
+        "/api/extract/text",
+        json={
+            "text": text,
+            "title": "Product Taste in Practice",
+            "podcast_mode": True,
+            "dialogue_mode": True,
+        },
+    )
+    assert res_ext.status_code == 200
+    doc_url = res_ext.json()["url"]
+
+    # Direct function call without any manual user prompt
+    distilled = distill_document_ideas(doc_url=doc_url)
+    assert "distillations" in distilled
+    assert len(distilled["distillations"]) == 3
+    lens_ids = [d["id"] for d in distilled["distillations"]]
+    assert lens_ids == ["core_thesis", "key_tradeoffs", "first_principles"]
+    assert len(distilled["combined_dialogue_turns"]) >= 6
+    assert distilled["benchmark_evals"]["overall_score"] >= 0.70
+    assert distilled["benchmark_evals"]["passed"] is True
+
+    # API endpoint call with zero user query required
+    res_distill = client.post("/api/rag/distill", json={"doc_url": doc_url})
+    assert res_distill.status_code == 200
+    payload = res_distill.json()
+    assert len(payload["distillations"]) == 3
+    for item in payload["distillations"]:
+        assert item["answer"]
+        assert len(item["dialogue_turns"]) >= 2
+        assert item["evals"]["overall_score"] >= 0.65
+
