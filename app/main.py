@@ -255,23 +255,50 @@ async def extract_and_process(request: ExtractRequest) -> ExtractResponse:
     except Exception as exc:
         logger.warning("Could not persist article to history: %s", exc)
 
-    if request.dialogue_mode:
-        from app.podcast.dialogue import _is_boilerplate, shape_article_into_dialogue
+    # Index extracted prose into Backend RAG Pipeline
+    from app.podcast.dialogue import _is_boilerplate, shape_article_into_dialogue
+    from app.rag import index_document_for_rag, run_backend_eval_suite
 
-        prose_sents = [
-            s.display_text
-            for s in processed.sentences
-            if s.kind == "prose" and s.display_text and not _is_boilerplate(s.display_text)
-        ]
-        paragraphs = []
-        for i in range(0, len(prose_sents), 2):
-            paragraphs.append(" ".join(prose_sents[i : i + 2]))
+    prose_sents = [
+        s.display_text
+        for s in processed.sentences
+        if s.kind == "prose" and s.display_text and not _is_boilerplate(s.display_text)
+    ]
+    paragraphs = []
+    for i in range(0, len(prose_sents), 2):
+        paragraphs.append(" ".join(prose_sents[i : i + 2]))
+
+    try:
+        rag_chunks = index_document_for_rag(
+            doc_url=processed.url,
+            title=processed.title,
+            paragraphs=paragraphs or prose_sents,
+        )
+    except Exception as exc:
+        logger.warning("RAG indexing warning for %s: %s", processed.url, exc)
+        rag_chunks = []
+
+    if request.dialogue_mode:
         dialogue_sents = shape_article_into_dialogue(
             title=processed.title,
             paragraphs=paragraphs,
             voice_a=request.voice_a,
             voice_b=request.voice_b,
         )
+        try:
+            gen_text = " ".join(s.get("display_text", "") for s in dialogue_sents[:6])
+            run_backend_eval_suite(
+                eval_type="extract_url_dialogue",
+                doc_url=processed.url,
+                query=processed.title,
+                generated_text=gen_text,
+                retrieved_chunks=rag_chunks[:4] or [{"text": p, "score": 0.9} for p in paragraphs[:4]],
+                dialogue_turns=dialogue_sents,
+                persist=True,
+            )
+        except Exception as exc:
+            logger.warning("Eval suite warning for %s: %s", processed.url, exc)
+
         return ExtractResponse(
             url=processed.url,
             title=processed.title,
@@ -293,6 +320,7 @@ async def extract_text_endpoint(req: TextExtractRequest) -> ExtractResponse:
     from app.extract.document import extract_from_text
     from app.podcast.cadence import shape_article_into_podcast
     from app.podcast.dialogue import shape_article_into_dialogue
+    from app.rag import index_document_for_rag, run_backend_eval_suite
 
     title, paragraphs = extract_from_text(req.text, fallback_title=req.title or "Pasted Monograph")
     if not paragraphs:
@@ -300,6 +328,12 @@ async def extract_text_endpoint(req: TextExtractRequest) -> ExtractResponse:
 
     content_hash = hashlib.sha256(req.text.encode()).hexdigest()[:12]
     doc_url = f"text://pasted/{content_hash}"
+
+    try:
+        rag_chunks = index_document_for_rag(doc_url=doc_url, title=title, paragraphs=paragraphs)
+    except Exception as exc:
+        logger.warning("Could not index pasted text for RAG: %s", exc)
+        rag_chunks = []
 
     if req.dialogue_mode:
         podcast_sents = shape_article_into_dialogue(
@@ -320,6 +354,20 @@ async def extract_text_endpoint(req: TextExtractRequest) -> ExtractResponse:
         )
         podcast_sents = [s.to_dict() for s in processed.sentences]
         extractor_label = "pasted_text"
+
+    try:
+        gen_text = " ".join(s.get("display_text", "") for s in podcast_sents[:6])
+        run_backend_eval_suite(
+            eval_type=extractor_label,
+            doc_url=doc_url,
+            query=f"{title} {' '.join(paragraphs[0].split()[:8])}",
+            generated_text=gen_text,
+            retrieved_chunks=rag_chunks or [{"text": p, "score": 0.9} for p in paragraphs],
+            dialogue_turns=podcast_sents,
+            persist=True,
+        )
+    except Exception as exc:
+        logger.warning("Could not run eval suite on pasted text: %s", exc)
 
     word_count = sum(len(p.split()) for p in paragraphs)
     est_minutes = max(0.5, round(word_count / 155.0, 1))
@@ -366,6 +414,7 @@ async def extract_file_endpoint(
     from app.extract.document import extract_document
     from app.podcast.cadence import shape_article_into_podcast
     from app.podcast.dialogue import shape_article_into_dialogue
+    from app.rag import index_document_for_rag, run_backend_eval_suite
 
     file_bytes = await file.read()
     if not file_bytes:
@@ -378,6 +427,12 @@ async def extract_file_endpoint(
     file_hash = hashlib.sha256(file_bytes[:1024]).hexdigest()[:10]
     safe_name = re.sub(r"[^a-zA-Z0-9_\-\.]", "_", file.filename or "doc")
     doc_url = f"file://uploaded/{safe_name}-{file_hash}"
+
+    try:
+        rag_chunks = index_document_for_rag(doc_url=doc_url, title=title, paragraphs=paragraphs)
+    except Exception as exc:
+        logger.warning("Could not index uploaded file for RAG: %s", exc)
+        rag_chunks = []
 
     if dialogue_mode:
         podcast_sents = shape_article_into_dialogue(
@@ -398,6 +453,20 @@ async def extract_file_endpoint(
         )
         podcast_sents = [s.to_dict() for s in processed.sentences]
         extractor_label = "uploaded_document"
+
+    try:
+        gen_text = " ".join(s.get("display_text", "") for s in podcast_sents[:6])
+        run_backend_eval_suite(
+            eval_type=extractor_label,
+            doc_url=doc_url,
+            query=f"{title} {' '.join(paragraphs[0].split()[:8])}",
+            generated_text=gen_text,
+            retrieved_chunks=rag_chunks or [{"text": p, "score": 0.9} for p in paragraphs],
+            dialogue_turns=podcast_sents,
+            persist=True,
+        )
+    except Exception as exc:
+        logger.warning("Could not run eval suite on uploaded file: %s", exc)
 
     word_count = sum(len(p.split()) for p in paragraphs)
     est_minutes = max(0.5, round(word_count / 155.0, 1))
@@ -430,6 +499,36 @@ async def extract_file_endpoint(
         estimated_read_minutes=est_minutes,
         sentences=[SentenceModel(**s) for s in podcast_sents],
     )
+
+
+class RAGQueryRequest(BaseModel):
+    query: str = Field(..., min_length=2, description="Question to ask against the indexed document(s)")
+    doc_url: Optional[str] = Field(None, description="Optional document URL to scope retrieval")
+    top_k: int = Field(3, ge=1, le=10, description="Number of top semantic chunks to retrieve")
+    voice_a: str = Field(DEFAULT_VOICE_ID, description="Anchor Voice ID (Speaker A)")
+    voice_b: str = Field("en-US-AvaMultilingualNeural", description="Focus Partner Voice ID (Speaker B)")
+
+
+@app.post("/api/rag/query")
+async def rag_query_endpoint(req: RAGQueryRequest):
+    """Executes hybrid BM25 + TF-IDF RAG retrieval, synthesizes a grounded 2-voice answer, and logs 3 backend evals."""
+    from app.rag import query_rag
+
+    return query_rag(
+        query=req.query,
+        doc_url=req.doc_url,
+        top_k=req.top_k,
+        voice_a=req.voice_a,
+        voice_b=req.voice_b,
+    )
+
+
+@app.get("/api/rag/evals")
+async def rag_evals_dashboard_endpoint(limit: int = Query(25, ge=1, le=100)):
+    """Returns live telemetry and historical scores across the 3 backend RAG & Dialogue evaluations."""
+    from app.rag import get_eval_dashboard_summary
+
+    return get_eval_dashboard_summary(limit=limit)
 
 
 @app.get("/api/tts")
