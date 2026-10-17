@@ -40,6 +40,9 @@ app = FastAPI(
 class ExtractRequest(BaseModel):
     url: HttpUrl = Field(..., description="The full HTTP/HTTPS URL of the article.")
     html: Optional[str] = Field(None, description="Optional raw HTML (Tier 0 bookmarklet).")
+    dialogue_mode: bool = Field(False, description="Convert article into 2-person Cognitive Focus Dialogue")
+    voice_a: str = Field(DEFAULT_VOICE_ID, description="Anchor Voice ID (Speaker A)")
+    voice_b: str = Field("en-US-AvaMultilingualNeural", description="Focus Partner Voice ID (Speaker B)")
 
 
 class ProgressRequest(BaseModel):
@@ -55,12 +58,18 @@ class SentenceModel(BaseModel):
     kind: str
     pause_after_ms: Optional[int] = 250
     mood: Optional[str] = "narrative"
+    speaker: Optional[str] = None
+    speaker_name: Optional[str] = None
+    voice_id: Optional[str] = None
 
 
 class TextExtractRequest(BaseModel):
     text: str = Field(..., min_length=5, description="Pasted document or podcast script text")
     title: Optional[str] = Field("Pasted Monograph", description="Document title")
     podcast_mode: bool = Field(True, description="Enable podcast cadence, pauses, and dramatic inflection")
+    dialogue_mode: bool = Field(False, description="Enable 2-person Cognitive Focus Dialogue")
+    voice_a: str = Field(DEFAULT_VOICE_ID, description="Anchor Voice ID (Speaker A)")
+    voice_b: str = Field("en-US-AvaMultilingualNeural", description="Focus Partner Voice ID (Speaker B)")
 
 
 class ExtractResponse(BaseModel):
@@ -85,9 +94,9 @@ async def get_voices():
 async def extract_and_process(request: ExtractRequest) -> ExtractResponse:
     """Extracts clean article text from URL and splits it into TTS sentences."""
     target_url = str(request.url)
-    if not request.html:
+    if not request.html and not request.dialogue_mode:
         cached = DB.get_article(target_url)
-        if cached:
+        if cached and not str(cached.get("extractor_used", "")).endswith("_dialogue"):
             import json
             sentences_data = json.loads(cached["sentences_json"])
             return ExtractResponse(
@@ -106,7 +115,7 @@ async def extract_and_process(request: ExtractRequest) -> ExtractResponse:
         raw_extraction = await extract_article(url=target_url, html=request.html)
     except ExtractionError as exc:
         cached = DB.get_article(target_url)
-        if cached:
+        if cached and not request.dialogue_mode:
             import json
             sentences_data = json.loads(cached["sentences_json"])
             return ExtractResponse(
@@ -123,7 +132,7 @@ async def extract_and_process(request: ExtractRequest) -> ExtractResponse:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as exc:
         cached = DB.get_article(target_url)
-        if cached:
+        if cached and not request.dialogue_mode:
             import json
             sentences_data = json.loads(cached["sentences_json"])
             return ExtractResponse(
@@ -141,6 +150,33 @@ async def extract_and_process(request: ExtractRequest) -> ExtractResponse:
         raise HTTPException(
             status_code=500, detail="An unexpected error occurred while extracting the page."
         ) from exc
+
+    if request.dialogue_mode:
+        from app.extract.document import extract_from_text
+        from app.podcast.dialogue import shape_article_into_dialogue
+
+        _, paragraphs = extract_from_text(raw_extraction.markdown, fallback_title=raw_extraction.title)
+        if not paragraphs:
+            paragraphs = [p.strip() for p in raw_extraction.markdown.split("\n\n") if p.strip()]
+        dialogue_sents = shape_article_into_dialogue(
+            title=raw_extraction.title,
+            paragraphs=paragraphs,
+            voice_a=request.voice_a,
+            voice_b=request.voice_b,
+        )
+        word_count = sum(len(p.split()) for p in paragraphs)
+        est_minutes = max(0.5, round(word_count / 150.0, 1))
+        return ExtractResponse(
+            url=raw_extraction.source_url,
+            title=raw_extraction.title,
+            author=raw_extraction.byline,
+            sitename=raw_extraction.sitename,
+            date=raw_extraction.date,
+            extractor_used=f"{raw_extraction.tier}_dialogue",
+            word_count=word_count,
+            estimated_read_minutes=est_minutes,
+            sentences=[SentenceModel(**s) for s in dialogue_sents],
+        )
 
     processed = create_processed_article(
         url=raw_extraction.source_url,
@@ -181,9 +217,10 @@ async def extract_and_process(request: ExtractRequest) -> ExtractResponse:
 
 @app.post("/api/extract/text", response_model=ExtractResponse)
 async def extract_text_endpoint(req: TextExtractRequest) -> ExtractResponse:
-    """Ingests pasted text or notes and converts them into a podcast audio script."""
+    """Ingests pasted text or notes and converts them into a podcast or 2-person dialogue script."""
     from app.extract.document import extract_from_text
     from app.podcast.cadence import shape_article_into_podcast
+    from app.podcast.dialogue import shape_article_into_dialogue
 
     title, paragraphs = extract_from_text(req.text, fallback_title=req.title or "Pasted Monograph")
     if not paragraphs:
@@ -192,8 +229,14 @@ async def extract_text_endpoint(req: TextExtractRequest) -> ExtractResponse:
     content_hash = hashlib.sha256(req.text.encode()).hexdigest()[:12]
     doc_url = f"text://pasted/{content_hash}"
 
-    if req.podcast_mode:
+    if req.dialogue_mode:
+        podcast_sents = shape_article_into_dialogue(
+            title, paragraphs, voice_a=req.voice_a, voice_b=req.voice_b
+        )
+        extractor_label = "dialogue_text"
+    elif req.podcast_mode:
         podcast_sents = shape_article_into_podcast(title, paragraphs)
+        extractor_label = "podcast_text"
     else:
         from app.text import create_processed_article
         markdown_body = "\n\n".join(paragraphs)
@@ -204,6 +247,7 @@ async def extract_text_endpoint(req: TextExtractRequest) -> ExtractResponse:
             extractor_used="pasted_text",
         )
         podcast_sents = [s.to_dict() for s in processed.sentences]
+        extractor_label = "pasted_text"
 
     word_count = sum(len(p.split()) for p in paragraphs)
     est_minutes = max(0.5, round(word_count / 155.0, 1))
@@ -214,10 +258,10 @@ async def extract_text_endpoint(req: TextExtractRequest) -> ExtractResponse:
         DB.save_article({
             "url": doc_url,
             "title": title,
-            "author": "Pasted Notes",
-            "sitename": "they.audio Podcast",
+            "author": "Focus Dialogue" if req.dialogue_mode else "Pasted Notes",
+            "sitename": "they.audio Focus Studio" if req.dialogue_mode else "they.audio Podcast",
             "date": None,
-            "extractor_used": "podcast_text" if req.podcast_mode else "pasted_text",
+            "extractor_used": extractor_label,
             "word_count": word_count,
             "estimated_read_minutes": est_minutes,
             "sentences_json": sentences_payload,
@@ -228,10 +272,10 @@ async def extract_text_endpoint(req: TextExtractRequest) -> ExtractResponse:
     return ExtractResponse(
         url=doc_url,
         title=title,
-        author="Pasted Notes",
-        sitename="they.audio Podcast",
+        author="Focus Dialogue" if req.dialogue_mode else "Pasted Notes",
+        sitename="they.audio Focus Studio" if req.dialogue_mode else "they.audio Podcast",
         date=None,
-        extractor_used="podcast_text" if req.podcast_mode else "pasted_text",
+        extractor_used=extractor_label,
         word_count=word_count,
         estimated_read_minutes=est_minutes,
         sentences=[SentenceModel(**s) for s in podcast_sents],
@@ -242,10 +286,14 @@ async def extract_text_endpoint(req: TextExtractRequest) -> ExtractResponse:
 async def extract_file_endpoint(
     file: UploadFile = File(...),
     podcast_mode: bool = Form(True),
+    dialogue_mode: bool = Form(False),
+    voice_a: str = Form(DEFAULT_VOICE_ID),
+    voice_b: str = Form("en-US-AvaMultilingualNeural"),
 ) -> ExtractResponse:
-    """Ingests uploaded document (PDF, Word docx, TXT, MD) and converts into podcast audio."""
+    """Ingests uploaded document (PDF, Word docx, TXT, MD) and converts into podcast or 2-person dialogue."""
     from app.extract.document import extract_document
     from app.podcast.cadence import shape_article_into_podcast
+    from app.podcast.dialogue import shape_article_into_dialogue
 
     file_bytes = await file.read()
     if not file_bytes:
@@ -259,8 +307,14 @@ async def extract_file_endpoint(
     safe_name = re.sub(r"[^a-zA-Z0-9_\-\.]", "_", file.filename or "doc")
     doc_url = f"file://uploaded/{safe_name}-{file_hash}"
 
-    if podcast_mode:
+    if dialogue_mode:
+        podcast_sents = shape_article_into_dialogue(
+            title, paragraphs, voice_a=voice_a, voice_b=voice_b
+        )
+        extractor_label = "dialogue_document"
+    elif podcast_mode:
         podcast_sents = shape_article_into_podcast(title, paragraphs)
+        extractor_label = "podcast_document"
     else:
         from app.text import create_processed_article
         markdown_body = "\n\n".join(paragraphs)
@@ -271,6 +325,7 @@ async def extract_file_endpoint(
             extractor_used="uploaded_document",
         )
         podcast_sents = [s.to_dict() for s in processed.sentences]
+        extractor_label = "uploaded_document"
 
     word_count = sum(len(p.split()) for p in paragraphs)
     est_minutes = max(0.5, round(word_count / 155.0, 1))
@@ -281,10 +336,10 @@ async def extract_file_endpoint(
         DB.save_article({
             "url": doc_url,
             "title": title,
-            "author": "Document Import",
+            "author": "Focus Dialogue" if dialogue_mode else "Document Import",
             "sitename": file.filename or "Uploaded File",
             "date": None,
-            "extractor_used": "podcast_document" if podcast_mode else "uploaded_document",
+            "extractor_used": extractor_label,
             "word_count": word_count,
             "estimated_read_minutes": est_minutes,
             "sentences_json": sentences_payload,
@@ -295,10 +350,10 @@ async def extract_file_endpoint(
     return ExtractResponse(
         url=doc_url,
         title=title,
-        author="Document Import",
+        author="Focus Dialogue" if dialogue_mode else "Document Import",
         sitename=file.filename or "Uploaded File",
         date=None,
-        extractor_used="podcast_document" if podcast_mode else "uploaded_document",
+        extractor_used=extractor_label,
         word_count=word_count,
         estimated_read_minutes=est_minutes,
         sentences=[SentenceModel(**s) for s in podcast_sents],

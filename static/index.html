@@ -806,6 +806,45 @@
       transition: opacity 0.25s ease;
     }
 
+    .dialogue-turn-block {
+      margin-bottom: 1.75rem;
+      padding: 0.85rem 1.2rem;
+      border-left: 2px solid var(--border-strong);
+      background-color: transparent;
+      transition: border-color 0.25s ease, background-color 0.25s ease, opacity 0.25s ease;
+    }
+
+    .dialogue-turn-block.speaker-a {
+      border-left-color: rgba(255, 98, 36, 0.55);
+    }
+
+    .dialogue-turn-block.speaker-b {
+      border-left-color: #38bdf8;
+      background-color: rgba(56, 189, 248, 0.035);
+      border-radius: 0 6px 6px 0;
+    }
+
+    .speaker-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.45rem;
+      color: var(--text-muted);
+    }
+
+    .dialogue-turn-block.speaker-a .speaker-tag {
+      color: var(--accent);
+    }
+
+    .dialogue-turn-block.speaker-b .speaker-tag {
+      color: #38bdf8;
+    }
+
     .sentence-span {
       cursor: pointer;
       border-radius: 4px;
@@ -1313,15 +1352,41 @@
           <span>SETTINGS</span>
         </div>
 
+        <div class="toggle-row" style="margin-bottom:0.65rem; padding-bottom:0.55rem; border-bottom:1px solid var(--border-rule);">
+          <div>
+            <div style="font-weight:700; color:var(--text-primary); font-size:0.78rem;">2-Voice Focus Dialogue</div>
+            <div style="font-family:var(--font-mono); font-size:9.5px; color:var(--text-muted);">Anchor + Focus Partner (Anti-Drift)</div>
+          </div>
+          <label class="switch-label">
+            <input type="checkbox" id="dialogueModeToggle" />
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
         <div class="control-group">
-          <label for="voiceSelect" class="control-label">Neural Speaker</label>
+          <label for="voiceSelect" id="voiceSelectLabel" class="control-label">Anchor Speaker (Voice A)</label>
           <select id="voiceSelect" class="select-input">
             <option value="en-US-AndrewMultilingualNeural">Andrew (US / Natural Studio)</option>
+            <option value="en-US-AvaMultilingualNeural">Ava (US / Clear &amp; Expressive)</option>
             <option value="en-US-AriaNeural">Aria (US / Expressive)</option>
             <option value="en-GB-RyanNeural">Ryan (UK / Monograph)</option>
-            <option value="en-IN-NeerjaNeural">Neerja (India / Melodic)</option>
-            <option value="en-IN-MadhurNeural">Madhur (India / Clear)</option>
-            <option value="fr-FR-KillianNeural">Killian (France / Continental)</option>
+            <option value="en-GB-SoniaNeural">Sonia (UK / Documentary)</option>
+            <option value="en-IN-NeerjaExpressiveNeural">Neerja (India / Melodic)</option>
+            <option value="hi-IN-MadhurNeural">Madhur (India / Clear)</option>
+            <option value="de-DE-KillianNeural">Killian (Continental)</option>
+          </select>
+        </div>
+
+        <div class="control-group" id="voiceBControlGroup" style="display:none;">
+          <label for="voiceBSelect" class="control-label" style="color:#38bdf8;">Focus Partner (Voice B)</label>
+          <select id="voiceBSelect" class="select-input">
+            <option value="en-US-AvaMultilingualNeural" selected>Ava (US / Clear &amp; Expressive)</option>
+            <option value="en-GB-SoniaNeural">Sonia (UK / Documentary)</option>
+            <option value="en-US-AriaNeural">Aria (US / Editorial)</option>
+            <option value="en-GB-RyanNeural">Ryan (UK / Conversational)</option>
+            <option value="en-US-AndrewMultilingualNeural">Andrew (US / Warm Narrator)</option>
+            <option value="en-IN-NeerjaExpressiveNeural">Neerja (India / Expressive)</option>
+            <option value="hi-IN-SwaraNeural">Swara (India / Clear)</option>
           </select>
         </div>
 
@@ -1513,6 +1578,18 @@
             <span class="switch-slider"></span>
           </label>
         </div>
+
+        <!-- 2-Voice Cognitive Focus Dialogue Option -->
+        <div style="margin-top:0.85rem; padding-top:0.85rem; border-top:1px solid var(--border-rule); display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-family:var(--font-ui); font-size:0.85rem; font-weight:700; color:var(--text-primary);">2-Voice Cognitive Focus Dialogue</div>
+            <div style="font-family:var(--font-mono); font-size:10.5px; color:var(--text-muted);">Anchor + Focus Partner breaks down dense text to keep you locked in (No AI banter / No verbatim ping-pong)</div>
+          </div>
+          <label class="switch-label">
+            <input type="checkbox" id="modalDialogueModeToggle" />
+            <span class="switch-slider"></span>
+          </label>
+        </div>
       </div>
 
       <div class="modal-foot">
@@ -1613,7 +1690,9 @@
       generation: 0,
       autoScroll: true,
       focusMode: false,
+      dialogueMode: false,
       voice: "en-US-AndrewMultilingualNeural",
+      voiceB: "en-US-AvaMultilingualNeural",
       rate: "+0%",
       ambient: "none",
       ambientVolume: 0.18,
@@ -1648,7 +1727,10 @@
     const lookaheadBufferText = document.getElementById("lookaheadBufferText");
     const statusDot = document.getElementById("statusDot");
     const statusText = document.getElementById("statusText");
+    const dialogueModeToggle = document.getElementById("dialogueModeToggle");
     const voiceSelect = document.getElementById("voiceSelect");
+    const voiceBControlGroup = document.getElementById("voiceBControlGroup");
+    const voiceBSelect = document.getElementById("voiceBSelect");
     const rateSelect = document.getElementById("rateSelect");
     const ambientSelect = document.getElementById("ambientSelect");
     const ambientVolumeSlider = document.getElementById("ambientVolumeSlider");
@@ -2131,16 +2213,24 @@
       return `/api/tts?${q.toString()}`;
     }
 
+    function resolveSentenceVoice(item) {
+      if (!item) return state.voice;
+      if (item.speaker === "B") return state.voiceB || item.voice_id || state.voice;
+      if (item.speaker === "A") return state.voice || item.voice_id;
+      return item.voice_id || state.voice;
+    }
+
     async function prefetchSentence(index) {
       if (index < 0 || index >= state.sentences.length) return;
       const item = state.sentences[index];
       const text = (item.speech_text || item.display_text || "").trim();
       if (!text) return;
 
-      const key = `${state.voice}|${state.rate}|${index}|${text}`;
+      const targetVoice = resolveSentenceVoice(item);
+      const key = `${targetVoice}|${state.rate}|${index}|${text}`;
       if (audioBlobCache.has(key) || inflightPrefetches.has(key)) return;
 
-      const url = makeAudioUrl(text, state.voice, state.rate);
+      const url = makeAudioUrl(text, targetVoice, state.rate);
       const promise = fetch(url)
         .then(res => res.blob())
         .then(blob => {
@@ -2166,7 +2256,8 @@
     async function getOrFetchSentenceAudio(index) {
       const item = state.sentences[index];
       const text = (item.speech_text || item.display_text || "").trim();
-      const key = `${state.voice}|${state.rate}|${index}|${text}`;
+      const targetVoice = resolveSentenceVoice(item);
+      const key = `${targetVoice}|${state.rate}|${index}|${text}`;
 
       if (audioBlobCache.has(key)) return audioBlobCache.get(key);
       if (inflightPrefetches.has(key)) {
@@ -2174,7 +2265,7 @@
         if (audioBlobCache.has(key)) return audioBlobCache.get(key);
       }
 
-      const res = await fetch(makeAudioUrl(text, state.voice, state.rate));
+      const res = await fetch(makeAudioUrl(text, targetVoice, state.rate));
       if (!res.ok) throw new Error("Synthesis failed");
       const blob = await res.blob();
       const objectUrl = URL.createObjectURL(blob);
@@ -2307,7 +2398,12 @@
         const res = await fetch("/api/extract", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: url }),
+          body: JSON.stringify({
+            url: url,
+            dialogue_mode: state.dialogueMode,
+            voice_a: state.voice,
+            voice_b: state.voiceB,
+          }),
         });
 
         if (!res.ok) {
@@ -2350,8 +2446,10 @@
         articleDomainBadge.textContent = article.extractor_used?.toUpperCase() || "DOCUMENT";
       }
 
-      const isPodcast = article.extractor_used?.includes("podcast");
+      const isDialogue = article.extractor_used?.includes("dialogue") || article.sentences.some(s => s.speaker);
+      const isPodcast = article.extractor_used?.includes("podcast") || isDialogue;
       articleCadenceBadge.style.display = isPodcast ? "inline-block" : "none";
+      articleCadenceBadge.textContent = isDialogue ? "2-VOICE FOCUS DIALOGUE" : "PODCAST CADENCE ENGINE";
 
       const total = article.sentences.length;
       articleSentenceBadge.textContent = `${total} SENTENCES`;
@@ -2363,11 +2461,20 @@
       proseContainer.innerHTML = "";
       let currentParagraphEl = document.createElement("p");
       currentParagraphEl.className = "prose-paragraph font-serif";
+      let currentSpeaker = null;
+      let currentTurnBlock = null;
 
       article.sentences.forEach(s => {
         if (s.kind === "code_spoken_cue" || s.kind === "table_spoken_cue") {
           if (currentParagraphEl.hasChildNodes()) {
-            proseContainer.appendChild(currentParagraphEl);
+            if (currentTurnBlock) {
+              currentTurnBlock.appendChild(currentParagraphEl);
+              proseContainer.appendChild(currentTurnBlock);
+              currentTurnBlock = null;
+              currentSpeaker = null;
+            } else {
+              proseContainer.appendChild(currentParagraphEl);
+            }
             currentParagraphEl = document.createElement("p");
             currentParagraphEl.className = "prose-paragraph font-serif";
           }
@@ -2378,6 +2485,30 @@
           cueDiv.addEventListener("click", () => playSentence(s.idx, true));
           proseContainer.appendChild(cueDiv);
           return;
+        }
+
+        if (s.speaker) {
+          if (s.speaker !== currentSpeaker) {
+            if (currentParagraphEl.hasChildNodes()) {
+              if (currentTurnBlock) {
+                currentTurnBlock.appendChild(currentParagraphEl);
+                proseContainer.appendChild(currentTurnBlock);
+              } else {
+                proseContainer.appendChild(currentParagraphEl);
+              }
+              currentParagraphEl = document.createElement("p");
+              currentParagraphEl.className = "prose-paragraph font-serif";
+            }
+            currentSpeaker = s.speaker;
+            currentTurnBlock = document.createElement("div");
+            currentTurnBlock.className = `dialogue-turn-block ${s.speaker === "B" ? "speaker-b" : "speaker-a"}`;
+            const tag = document.createElement("div");
+            tag.className = "speaker-tag";
+            tag.textContent = s.speaker === "B"
+              ? `${(s.speaker_name || "FOCUS PARTNER").toUpperCase()} · VOICE B`
+              : `${(s.speaker_name || "ANCHOR").toUpperCase()} · VOICE A`;
+            currentTurnBlock.appendChild(tag);
+          }
         }
 
         const span = document.createElement("span");
@@ -2401,7 +2532,12 @@
       });
 
       if (currentParagraphEl.hasChildNodes()) {
-        proseContainer.appendChild(currentParagraphEl);
+        if (currentTurnBlock) {
+          currentTurnBlock.appendChild(currentParagraphEl);
+          proseContainer.appendChild(currentTurnBlock);
+        } else {
+          proseContainer.appendChild(currentParagraphEl);
+        }
       }
     }
 
@@ -2555,6 +2691,41 @@
       audioBlobCache.clear();
       if (state.status === AppState.PLAYING) playSentence(state.currentIndex, true);
     });
+
+    if (voiceBSelect) {
+      voiceBSelect.addEventListener("change", () => {
+        state.voiceB = voiceBSelect.value;
+        audioBlobCache.clear();
+        if (state.status === AppState.PLAYING) playSentence(state.currentIndex, true);
+      });
+    }
+
+    function syncDialogueMode(enabled) {
+      state.dialogueMode = enabled;
+      if (dialogueModeToggle) dialogueModeToggle.checked = enabled;
+      const modalToggle = document.getElementById("modalDialogueModeToggle");
+      if (modalToggle) modalToggle.checked = enabled;
+      if (voiceBControlGroup) {
+        voiceBControlGroup.style.display = enabled ? "flex" : "none";
+      }
+      showToast(enabled ? "2-Voice Focus Dialogue enabled (Anchor + Focus Partner)" : "Single-Voice Monograph Mode");
+      if (state.article && state.article.url && state.article.url.startsWith("http")) {
+        loadAndExtractUrl(state.article.url, 0, state.status === AppState.PLAYING);
+      }
+    }
+
+    if (dialogueModeToggle) {
+      dialogueModeToggle.addEventListener("change", () => {
+        syncDialogueMode(dialogueModeToggle.checked);
+      });
+    }
+
+    const modalDialogueModeToggle = document.getElementById("modalDialogueModeToggle");
+    if (modalDialogueModeToggle) {
+      modalDialogueModeToggle.addEventListener("change", () => {
+        syncDialogueMode(modalDialogueModeToggle.checked);
+      });
+    }
 
     rateSelect.addEventListener("change", () => {
       state.rate = rateSelect.value;
@@ -2739,7 +2910,7 @@
       }
       if (imageFile) {
         uploadModal.classList.add("active");
-        fileModeBtn.click();
+        tabUploadFileBtn.click();
         handleFileSelection(imageFile);
         showToast("Screenshot captured from clipboard! Ready to podcast.");
       }
@@ -2747,8 +2918,9 @@
 
     submitUploadBtn.addEventListener("click", async () => {
       const isPodcast = podcastModeToggle.checked;
+      const isDialogue = modalDialogueModeToggle ? modalDialogueModeToggle.checked : state.dialogueMode;
       submitUploadBtn.disabled = true;
-      submitUploadBtn.textContent = "Processing Podcast Prose...";
+      submitUploadBtn.textContent = isDialogue ? "Shaping 2-Voice Focus Dialogue..." : "Processing Podcast Prose...";
 
       try {
         if (currentUploadMode === "file") {
@@ -2783,6 +2955,9 @@
                   text: ocrText,
                   title: chosenFile.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " "),
                   podcast_mode: isPodcast,
+                  dialogue_mode: isDialogue,
+                  voice_a: state.voice,
+                  voice_b: state.voiceB,
                 }),
               });
               if (!res.ok) {
@@ -2798,6 +2973,9 @@
           const formData = new FormData();
           formData.append("file", chosenFile);
           formData.append("podcast_mode", isPodcast ? "true" : "false");
+          formData.append("dialogue_mode", isDialogue ? "true" : "false");
+          formData.append("voice_a", state.voice);
+          formData.append("voice_b", state.voiceB);
 
           const res = await fetch("/api/extract/file", {
             method: "POST",
@@ -2829,6 +3007,9 @@
               text: text,
               title: pasteTitleInput.value.trim() || "Pasted Script",
               podcast_mode: isPodcast,
+              dialogue_mode: isDialogue,
+              voice_a: state.voice,
+              voice_b: state.voiceB,
             }),
           });
 

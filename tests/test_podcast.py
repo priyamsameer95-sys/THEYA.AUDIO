@@ -110,3 +110,113 @@ def test_api_extract_file_markdown() -> None:
 def test_extract_document_rejects_raw_image() -> None:
     with pytest.raises(ValueError, match="requires OCR processing"):
         extract_document("screenshot.png", b"\x89PNG\r\n\x1a\n...")
+
+
+def test_dialogue_strips_cheesy_ai_banter() -> None:
+    from app.podcast.dialogue import strip_cheesy_banter
+
+    raw = (
+        "Welcome back to the deep dive! Buckle up! "
+        "Wow, that's so fascinating! That's a great point! "
+        "Cognitive load theory explains how working memory processes new information."
+    )
+    cleaned = strip_cheesy_banter(raw)
+    assert "deep dive" not in cleaned.lower()
+    assert "buckle up" not in cleaned.lower()
+    assert "fascinating" not in cleaned.lower()
+    assert "great point" not in cleaned.lower()
+    assert "Cognitive load theory explains" in cleaned
+
+
+def test_dialogue_avoids_ping_pong_and_injects_cognitive_focus() -> None:
+    from app.podcast.dialogue import shape_article_into_dialogue
+
+    paragraphs = [
+        "Working memory has a strict bottleneck when decoding unfamiliar technical abstractions, which causes readers to lose focus after ninety seconds of unbroken prose.",
+        "However, when a second perspective interrupts the monologue to ask a concrete question, the brain resets its attention loop and anchors the concept in long-term memory.",
+        "In fact, active retrieval matters far more than passive rereading: testing yourself on the core mechanism forces neural consolidation.",
+    ]
+    sents = shape_article_into_dialogue(
+        title="How the Brain Locks In Complex Ideas",
+        paragraphs=paragraphs,
+        voice_a="en-US-AndrewMultilingualNeural",
+        voice_b="en-US-AvaMultilingualNeural",
+    )
+    assert len(sents) > len(paragraphs) + 1
+    speakers = [s["speaker"] for s in sents]
+    assert "A" in speakers
+    assert "B" in speakers
+
+    # Ensure voices are properly bound to speakers
+    for s in sents:
+        if s["speaker"] == "A":
+            assert s["voice_id"] == "en-US-AndrewMultilingualNeural"
+            assert s["speaker_name"] == "Anchor"
+        else:
+            assert s["voice_id"] == "en-US-AvaMultilingualNeural"
+            assert s["speaker_name"] == "Focus Partner"
+
+    # Anti-Ping-Pong check: Speaker B must provide cognitive focus/clarification turns,
+    # not just read raw source paragraphs verbatim in a 1-to-1 alternation
+    b_texts = " ".join(s["display_text"].lower() for s in sents if s["speaker"] == "B")
+    assert any(
+        cue in b_texts
+        for cue in ["hold on", "wait", "plain", "so if", "why", "lock", "break", "mean", "takeaway", "unpack"]
+    )
+    # Anti-Banter check
+    all_text = " ".join(s["display_text"].lower() for s in sents)
+    assert "welcome back" not in all_text
+    assert "buckle up" not in all_text
+
+
+def test_api_extract_text_dialogue_mode() -> None:
+    client = TestClient(app)
+    text = (
+        "# Distributed Consensus in Plain Sight\n\n"
+        "Byzantine fault tolerance requires nodes to agree on state even when some actors transmit conflicting messages across an unreliable network.\n\n"
+        "However, the real bottleneck is not computation — it is the quadratic message complexity required for every round of voting."
+    )
+    res = client.post("/api/extract/text", json={
+        "text": text,
+        "title": "Distributed Consensus in Plain Sight",
+        "podcast_mode": True,
+        "dialogue_mode": True,
+        "voice_a": "en-US-AndrewMultilingualNeural",
+        "voice_b": "en-US-AvaMultilingualNeural",
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert data["extractor_used"] == "dialogue_text"
+    speakers = {s["speaker"] for s in data["sentences"]}
+    assert speakers == {"A", "B"}
+    voices = {s["voice_id"] for s in data["sentences"]}
+    assert "en-US-AndrewMultilingualNeural" in voices
+    assert "en-US-AvaMultilingualNeural" in voices
+
+
+def test_api_extract_file_dialogue_mode() -> None:
+    client = TestClient(app)
+    file_bytes = io.BytesIO(
+        b"# Cognitive Focus Architecture\n\n"
+        b"Dense technical monographs often overwhelm working memory because clauses stack without a pause for synthesis.\n\n"
+        b"Crucially, breaking a thesis into an anchor explanation and a clarifying question keeps the listener locked in."
+    )
+    res = client.post(
+        "/api/extract/file",
+        files={"file": ("focus.md", file_bytes, "text/markdown")},
+        data={
+            "podcast_mode": "true",
+            "dialogue_mode": "true",
+            "voice_a": "en-GB-RyanNeural",
+            "voice_b": "en-GB-SoniaNeural",
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["extractor_used"] == "dialogue_document"
+    speakers = {s["speaker"] for s in data["sentences"]}
+    assert speakers == {"A", "B"}
+    voices = {s["voice_id"] for s in data["sentences"]}
+    assert "en-GB-RyanNeural" in voices
+    assert "en-GB-SoniaNeural" in voices
+

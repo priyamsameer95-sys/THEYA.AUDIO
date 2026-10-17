@@ -20,6 +20,9 @@ class Sentence:
     kind: str = "prose"  # "title", "heading", "prose", "code_cue", "table_cue"
     pause_after_ms: int = 250
     mood: str = "narrative"
+    speaker: Optional[str] = None
+    speaker_name: Optional[str] = None
+    voice_id: Optional[str] = None
 
     def to_dict(self) -> dict:
         return asdict(self)
