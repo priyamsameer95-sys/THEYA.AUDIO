@@ -112,11 +112,13 @@ async def extract_and_process(request: ExtractRequest) -> ExtractResponse:
                     sentences=[SentenceModel(**s) for s in sentences_data],
                 )
             else:
-                from app.podcast.dialogue import shape_article_into_dialogue
+                from app.podcast.dialogue import _is_boilerplate, shape_article_into_dialogue
                 prose_sents = [
                     s["display_text"]
                     for s in sentences_data
-                    if s.get("kind") == "prose" and s.get("display_text")
+                    if s.get("kind") == "prose"
+                    and s.get("display_text")
+                    and not _is_boilerplate(s["display_text"])
                 ]
                 paragraphs: List[str] = []
                 for i in range(0, len(prose_sents), 2):
@@ -214,10 +216,12 @@ async def extract_and_process(request: ExtractRequest) -> ExtractResponse:
         logger.warning("Could not persist article to history: %s", exc)
 
     if request.dialogue_mode:
-        from app.podcast.dialogue import shape_article_into_dialogue
+        from app.podcast.dialogue import _is_boilerplate, shape_article_into_dialogue
 
         prose_sents = [
-            s.display_text for s in processed.sentences if s.kind == "prose" and s.display_text
+            s.display_text
+            for s in processed.sentences
+            if s.kind == "prose" and s.display_text and not _is_boilerplate(s.display_text)
         ]
         paragraphs = []
         for i in range(0, len(prose_sents), 2):
