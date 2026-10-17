@@ -541,6 +541,18 @@ async def rag_distill_endpoint(req: RAGDistillRequest):
     )
 
 
+@app.post("/api/rag/benchmark")
+async def rag_benchmark_endpoint(req: RAGDistillRequest):
+    """Executes an end-to-end test of User Call -> RAG Pipeline -> 3-Lens Idea Distillation -> Final 2-Voice Product."""
+    from app.rag import run_e2e_rag_product_benchmark
+
+    return run_e2e_rag_product_benchmark(
+        doc_url=req.doc_url,
+        voice_a=req.voice_a,
+        voice_b=req.voice_b,
+    )
+
+
 @app.get("/api/rag/evals")
 async def rag_evals_dashboard_endpoint(limit: int = Query(25, ge=1, le=100)):
     """Returns live telemetry and historical scores across the 3 backend RAG & Dialogue evaluations."""

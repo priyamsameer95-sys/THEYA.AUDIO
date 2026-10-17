@@ -389,3 +389,75 @@ def get_eval_dashboard_summary(limit: int = 25) -> Dict[str, Any]:
         },
         "recent_runs": runs,
     }
+
+
+def eval_final_product_metrics(
+    dialogue_turns: List[Dict[str, Any]],
+    source_word_count: int = 100,
+    latency_ms: float = 0.0,
+) -> Dict[str, Any]:
+    """Evaluates the Final Product (2-Voice Focus Dialogue + TTS Audio Readiness).
+
+    Measures:
+    - `tts_breath_compliance_rate`: % of turns <= 45 words for natural spoken breath cadence.
+    - `artifact_free_rate`: % of turns free of raw XML/SSML tags (`<break`), markdown pipes (`|`), or raw URLs.
+    - `speaker_alternation_rate`: % of adjacent turns that switch between Speaker A and Speaker B.
+    - `idea_compression_ratio`: ratio of spoken distillation words to source words.
+    - `pipeline_latency_ms`: end-to-end execution latency in milliseconds.
+    """
+    if not dialogue_turns:
+        return {
+            "tts_breath_compliance_rate": 0.0,
+            "artifact_free_rate": 0.0,
+            "speaker_alternation_rate": 0.0,
+            "idea_compression_ratio": 0.0,
+            "avg_turn_words": 0.0,
+            "pipeline_latency_ms": round(latency_ms, 2),
+            "passed": False,
+        }
+
+    n = len(dialogue_turns)
+    breath_ok = 0
+    artifact_free = 0
+    alternations = 0
+    total_spoken_words = 0
+
+    artifact_regex = re.compile(r"(?:<\s*/?\s*break\b|\|\s*\w+\s*\||https?://\S+)", re.IGNORECASE)
+
+    for idx, turn in enumerate(dialogue_turns):
+        disp = str(turn.get("display_text") or "")
+        words = disp.split()
+        w_count = len(words)
+        total_spoken_words += w_count
+
+        if 2 <= w_count <= 48:
+            breath_ok += 1
+
+        if not artifact_regex.search(disp) and len(disp.strip()) > 0:
+            artifact_free += 1
+
+        if idx > 0:
+            prev_spk = str(dialogue_turns[idx - 1].get("speaker") or "A")
+            cur_spk = str(turn.get("speaker") or "A")
+            if cur_spk != prev_spk:
+                alternations += 1
+
+    breath_rate = round(breath_ok / max(1, n), 3)
+    artifact_rate = round(artifact_free / max(1, n), 3)
+    alt_rate = round(alternations / max(1, n - 1), 3) if n > 1 else 1.0
+    avg_words = round(total_spoken_words / max(1, n), 1)
+    compression = round(total_spoken_words / max(1, source_word_count), 2)
+
+    passed = bool(breath_rate >= 0.80 and artifact_rate == 1.0 and alt_rate >= 0.45)
+
+    return {
+        "tts_breath_compliance_rate": breath_rate,
+        "artifact_free_rate": artifact_rate,
+        "speaker_alternation_rate": alt_rate,
+        "idea_compression_ratio": compression,
+        "avg_turn_words": avg_words,
+        "turn_count": n,
+        "pipeline_latency_ms": round(latency_ms, 2),
+        "passed": passed,
+    }
+

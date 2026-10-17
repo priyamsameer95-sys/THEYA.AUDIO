@@ -5,6 +5,7 @@ from app.rag.evals import (
     eval_anti_slop_dialogue_quality,
     eval_context_relevance_and_recall,
     eval_faithfulness_and_grounding,
+    eval_final_product_metrics,
     get_eval_dashboard_summary,
     run_backend_eval_suite,
 )
@@ -13,6 +14,7 @@ from app.rag.pipeline import (
     index_document_for_rag,
     query_rag,
     retrieve_top_chunks,
+    run_e2e_rag_product_benchmark,
 )
 
 __all__ = [
@@ -20,9 +22,11 @@ __all__ = [
     "eval_anti_slop_dialogue_quality",
     "eval_context_relevance_and_recall",
     "eval_faithfulness_and_grounding",
+    "eval_final_product_metrics",
     "get_eval_dashboard_summary",
     "index_document_for_rag",
     "query_rag",
     "retrieve_top_chunks",
     "run_backend_eval_suite",
+    "run_e2e_rag_product_benchmark",
 ]

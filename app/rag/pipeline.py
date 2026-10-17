@@ -464,3 +464,78 @@ def distill_document_ideas(
         },
     }
 
+
+def run_e2e_rag_product_benchmark(
+    doc_url: Optional[str] = None,
+    voice_a: str = DEFAULT_VOICE_A,
+    voice_b: str = DEFAULT_VOICE_B,
+) -> Dict[str, Any]:
+    """Executes an end-to-end test of User Call -> RAG Pipeline -> 3-Lens Idea Distillation -> Final 2-Voice Product."""
+    import time
+    from app.rag.evals import eval_final_product_metrics
+
+    t0 = time.perf_counter()
+
+    # Step 1: Ensure target or golden benchmark document is indexed in RAG
+    bench_url = doc_url or "benchmark://theya-audio/mental-models-in-practice"
+    chunks = DB.get_rag_chunks(doc_url=bench_url) if doc_url else []
+    if not chunks:
+        bench_paragraphs = [
+            "In his eyes, the era of growth hacking was over - and in its place was a return to craft and quality.",
+            "As AI commoditizes underlying proprietary models, companies differentiate through network effects, brand, and product taste rather than raw model weights.",
+            "However, the primary cognitive bottleneck for human learners is unbroken monotone text that saturates working memory within forty seconds.",
+            "Consequently, teams that reduce dense documents into interactive two-voice working sessions retain core mental models with far less effort.",
+        ]
+        chunks = index_document_for_rag(
+            doc_url=bench_url,
+            title="Mental Models & Product Craft",
+            paragraphs=bench_paragraphs,
+        )
+
+    source_word_count = sum(int(c.get("token_count", len(str(c.get("text", "")).split()))) for c in chunks)
+
+    # Step 2: Run 3-Lens Idea Distillation (Core Thesis, Key Tradeoffs, First-Principles)
+    distilled = distill_document_ideas(doc_url=bench_url, voice_a=voice_a, voice_b=voice_b)
+
+    # Step 3: Simulate a direct user RAG query against the indexed document
+    user_query = "Why is growth hacking over and how do companies differentiate as AI commoditizes models?"
+    rag_res = query_rag(
+        query=user_query,
+        doc_url=bench_url,
+        top_k=2,
+        voice_a=voice_a,
+        voice_b=voice_b,
+    )
+
+    elapsed_ms = (time.perf_counter() - t0) * 1000.0
+
+    # Step 4: Evaluate Final Product (2-Voice Dialogue + TTS Breath & Artifact Compliance)
+    all_product_turns = distilled["combined_dialogue_turns"]
+    product_metrics = eval_final_product_metrics(
+        dialogue_turns=all_product_turns,
+        source_word_count=source_word_count,
+        latency_ms=elapsed_ms,
+    )
+
+    top1_score = float(rag_res["retrieved_chunks"][0]["score"]) if rag_res["retrieved_chunks"] else 0.0
+    eval_scores = distilled["benchmark_evals"]
+    overall_passed = bool(eval_scores["passed"] and product_metrics["passed"] and top1_score > 0.30)
+
+    return {
+        "status": "ok",
+        "doc_url": bench_url,
+        "title": distilled["title"],
+        "passed": overall_passed,
+        "rag_metrics": {
+            "chunks_indexed": len(chunks),
+            "source_word_count": source_word_count,
+            "top1_retrieval_score": round(top1_score, 3),
+            "distillation_lenses_count": len(distilled["distillations"]),
+            "query_tested": user_query,
+        },
+        "product_metrics": product_metrics,
+        "eval_scores": eval_scores,
+        "distillations": distilled["distillations"],
+    }
+
+

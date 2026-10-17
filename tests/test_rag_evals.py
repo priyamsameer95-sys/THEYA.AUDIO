@@ -5,9 +5,10 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.rag.evals import (
-     eval_anti_slop_dialogue_quality,
+    eval_anti_slop_dialogue_quality,
     eval_context_relevance_and_recall,
     eval_faithfulness_and_grounding,
+    eval_final_product_metrics,
     run_backend_eval_suite,
 )
 from app.rag.pipeline import (
@@ -15,6 +16,7 @@ from app.rag.pipeline import (
     index_document_for_rag,
     query_rag,
     retrieve_top_chunks,
+    run_e2e_rag_product_benchmark,
 )
 
 
@@ -220,4 +222,49 @@ def test_auto_idea_distillation_and_preseeded_evals() -> None:
         assert item["answer"]
         assert len(item["dialogue_turns"]) >= 2
         assert item["evals"]["overall_score"] >= 0.65
+
+
+def test_end_to_end_user_journey_rag_to_final_product_metrics() -> None:
+    """Tests the full user call -> RAG pipeline -> final 2-voice product metrics and /api/rag/benchmark."""
+    client = TestClient(app)
+
+    # 1. Run the E2E RAG + Final Product benchmark directly
+    report = run_e2e_rag_product_benchmark()
+    assert report["passed"] is True
+    assert "rag_metrics" in report
+    assert "product_metrics" in report
+    assert "eval_scores" in report
+
+    # Verify RAG pipeline metrics
+    rag_m = report["rag_metrics"]
+    assert rag_m["chunks_indexed"] >= 2
+    assert rag_m["top1_retrieval_score"] > 0.35
+    assert rag_m["distillation_lenses_count"] == 3
+
+    # Verify Final Product (2-Voice Dialogue + TTS Breath Compliance) metrics
+    prod_m = report["product_metrics"]
+    assert prod_m["tts_breath_compliance_rate"] >= 0.85
+    assert prod_m["speaker_alternation_rate"] >= 0.50
+    assert prod_m["artifact_free_rate"] == 1.0
+    assert prod_m["pipeline_latency_ms"] >= 0.0
+    assert prod_m["passed"] is True
+
+    # 2. Verify unit behavior of eval_final_product_metrics on clean vs broken product output
+    bad_turns = [
+        {"speaker": "A", "display_text": "| Raw Table | <break time='500ms'/> " + ("word " * 60), "speech_text": "<break/>"},
+        {"speaker": "A", "display_text": "Same speaker monotony without alternation.", "speech_text": "Same speaker."},
+    ]
+    bad_prod = eval_final_product_metrics(bad_turns, source_word_count=100, latency_ms=12.5)
+    assert bad_prod["artifact_free_rate"] < 1.0
+    assert bad_prod["speaker_alternation_rate"] == 0.0
+    assert bad_prod["passed"] is False
+
+    # 3. Verify POST /api/rag/benchmark endpoint
+    res_bench = client.post("/api/rag/benchmark", json={})
+    assert res_bench.status_code == 200
+    bench_json = res_bench.json()
+    assert bench_json["passed"] is True
+    assert bench_json["eval_scores"]["overall_score"] >= 0.70
+    assert bench_json["product_metrics"]["tts_breath_compliance_rate"] >= 0.85
+
 
